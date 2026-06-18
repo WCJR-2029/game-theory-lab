@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Virtual env
+.venv/
+venv/
+
+# Local app data (anonymous progress lives in the user's home, not the repo)
+.gtlab/
+
+# OS / editor
+.DS_Store
+*.swp
+.idea/
+.vscode/

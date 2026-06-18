@@ -1,0 +1,17 @@
+[theme]
+base = "dark"
+
+# Deep slate canvas — easy on the eyes, feels like a lab
+backgroundColor     = "#0F1216"
+
+# Cards and secondary surfaces — slightly lifted from the background
+secondaryBackgroundColor = "#1A1F27"
+
+# Warm amber — the single confident accent
+primaryColor        = "#E6A23C"
+
+# Clean near-white text — readable without being harsh
+textColor           = "#E2E6EA"
+
+# System grotesk stack — no Google Fonts CDN dependency needed
+font                = "sans serif"

@@ -1,0 +1,13 @@
+# Game Theory Lab — dependencies
+
+# Engine (T1-T4)
+pytest>=7.0
+
+# UI (T5-T11)
+streamlit>=1.33
+pandas>=2.0
+altair>=5.0   # Altair leaderboard charts with per-bar color (ADR-012)
+
+# Optional: axelrod strategy adapter (T4).
+# The core engine works without it; the AxelrodAdapter becomes unavailable.
+# axelrod>=4.13
