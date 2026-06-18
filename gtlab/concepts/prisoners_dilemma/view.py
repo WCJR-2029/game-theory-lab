@@ -40,6 +40,7 @@ from gtlab.ui.theme import (
     arena_reveal,
     render_move_buttons_equal,
     intro_above_fold,
+    transfer_expander,
 )
 from gtlab.ui.utils import ordinal
 from gtlab.concepts.prisoners_dilemma.briefing import (
@@ -466,6 +467,18 @@ def _render_debrief(arena: ArenaState, progress: dict) -> None:
     st.divider()
     section_title("Final Standings")
     _render_debrief_standings(arena)
+
+    st.divider()
+
+    # C3: light transfer beat — where else does this shape show up?
+    transfer_expander([
+        "Two rival shops deciding whether to undercut each other's prices — "
+        "both would be better off holding firm, but each worries the other won't.",
+        "Two countries deciding whether to honour an arms-reduction treaty — "
+        "both gain from disarming, but neither can verify the other has.",
+        "Two flatmates deciding whether to do the washing-up — "
+        "both would prefer a clean kitchen, but each hopes the other goes first.",
+    ])
 
     st.divider()
     if st.button("Play again", type="primary", key="pd_play_again"):

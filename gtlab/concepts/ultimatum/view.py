@@ -68,6 +68,7 @@ from gtlab.ui.theme import (
     arena_reveal,
     render_move_buttons_equal,
     intro_above_fold,
+    transfer_expander,
 )
 
 # ---------------------------------------------------------------------------

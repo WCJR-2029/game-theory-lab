@@ -15,15 +15,17 @@ Run it, pick a game from the menu, and play.
 
 | Game | What you feel |
 |------|---------------|
-| **Prisoner's Dilemma** | A live tournament arena — cooperation quietly out-earns cleverness over the long run. |
+| **Prisoner's Dilemma** | A live tournament arena — in a field of strategies that can be trusted, cooperation tends to come out ahead. But it depends who's in the room. |
 | **Stag Hunt** | Trust unlocks the bigger prize. Opponents can *announce* their move first — but talk is cheap, and some bluff. |
 | **Chicken / Hawk-Dove** | Nerve and brinkmanship. Throw away the wheel to force the other to yield — but if you both do, you crash. A crash-severity dial tunes the stakes. |
 | **Schelling Points** | Pure coordination: match a hidden stranger with no way to communicate. Why does everyone say 7? Includes focal-vs-logic puzzles where the clever answer loses. |
 | **Ultimatum & Dictator** | Fairness versus cold logic. Propose a split or accept/reject one — and feel the urge to burn money to punish unfairness. Reputation follows you. |
 | **Matching Pennies & RPS** | Be unpredictable — and discover how hard that is. A live readout shows how readable you've been; meet the unbeatable Perfect Randomizer. |
 
-Each game has replay knobs (opponent variety, noise, mystery opponents, and game-specific dials) so
-it stays worth coming back to.
+Each game has replay knobs (opponent variety, noise, mystery opponents, and game-specific dials).
+Some games — particularly the noise variants, Schelling puzzles, and the predictability duel in
+Matching Pennies — genuinely reward repeat play as you probe different configurations. Others deliver
+their core insight in a run or two; the knobs are there if you want to go deeper.
 
 ---
 

@@ -68,6 +68,7 @@ from gtlab.ui.theme import (
     arena_reveal,
     render_move_buttons_equal,
     intro_above_fold,
+    transfer_expander,
 )
 from gtlab.ui.utils import ordinal
 
@@ -521,8 +522,10 @@ def _make_chk_reveal_body(rows: list[dict], arena: CHKArenaState) -> str:
     if top_bot:
         if top_bot["name"] == committer_name:
             sentences.append(
-                "The Committer finished at the top — throwing away the wheel early "
-                "forced opponents to make way, round after round."
+                "The Committer finished at the top — by visibly locking itself to "
+                "Straight, it forced the opponents who could read the commitment to "
+                "swerve. (It still crashed into the ones that can't adapt — a thrown "
+                "wheel only works against someone able to see it and respond.)"
             )
         elif top_bot["name"] == hawk_name:
             sentences.append(
@@ -593,6 +596,12 @@ def _render_chk_debrief(arena: CHKArenaState, progress: dict) -> None:
     reveal_body = _make_chk_reveal_body(rows, arena)
     if reveal_body:
         arena_reveal("What just happened in there", reveal_body)
+
+    transfer_expander([
+        "Two drivers speeding toward a one-lane bridge, each daring the other to brake first.",
+        "A union and management both refusing to blink as a strike deadline ticks down.",
+        "Two rivals in a public standoff, each betting the other will back down before it gets ugly.",
+    ])
 
     nudge_state = get_nudge_state(progress, CHK_CONCEPT_KEY)
     exp = progress.get("concepts", {}).get(CHK_CONCEPT_KEY, 0)

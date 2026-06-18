@@ -534,7 +534,7 @@ class TestSCHArenaAppTest:
         assert not at.exception, f"Integer-range submit raised: {at.exception}"
 
     def test_sch_hard_mode_session_plays_full(self):
-        """Hard mode: enable toggle, start session, play all 18 puzzles to completion."""
+        """Hard mode: enable toggle, start session, play to completion (bank may grow)."""
         at = _at_menu()
         at = _enter_concept(at, "schelling")
         assert not at.exception
@@ -547,7 +547,7 @@ class TestSCHArenaAppTest:
         assert not at.exception
 
         # Play until session complete
-        for i in range(25):  # bank has 18 puzzles max
+        for i in range(60):  # generous upper bound; the bank can grow past 18
             btn_keys = [b.key for b in at.button]
             if "sch_play_again" in btn_keys:
                 break  # session complete

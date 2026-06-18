@@ -159,6 +159,82 @@ _NUM_THOUSANDS = CoordinationPuzzle(
     ),
 )
 
+_NUM_PRIME = CoordinationPuzzle(
+    id="num_prime",
+    category="numbers",
+    prompt=(
+        "Pick a prime number. Any prime — there's no upper limit. "
+        "A stranger is doing the same right now, with no way to consult you. "
+        "You win only if you both name the same one. What do you pick?"
+    ),
+    choice_space=IntegerRange(lo=2, hi=10_000),
+    focal_distribution={
+        2: 18,
+        3: 22,
+        7: 20,
+        5: 15,
+        11: 10,
+        13: 8,
+        17: 4,
+        19: 3,
+    },
+    logical_decoy=2,
+    decoy_explanation=(
+        "Two is the only even prime and the smallest — a genuinely special "
+        "mathematical fact. But 3 and 7 win by sheer cultural familiarity: "
+        "they feel more 'prime-like' to most people even if 2 is the mathematical outlier."
+    ),
+)
+
+_NUM_DOZEN = CoordinationPuzzle(
+    id="num_dozen",
+    category="numbers",
+    prompt=(
+        "Pick a whole number from 1 to 12. "
+        "A stranger picks one at the same instant, no communication. "
+        "You win only if you match. What do you pick?"
+    ),
+    choice_space=IntegerRange(lo=1, hi=12),
+    focal_distribution={
+        1: 10,
+        7: 25,
+        12: 22,
+        6: 14,
+        3: 10,
+        10: 8,
+        2: 6,
+        9: 5,
+    },
+)
+
+_NUM_NEGATIVE = CoordinationPuzzle(
+    id="num_negative",
+    category="numbers",
+    prompt=(
+        "Pick any whole number — positive, negative, or zero. "
+        "A stranger does the same with no way to coordinate. "
+        "You win only if you both pick the same number. What do you pick?"
+    ),
+    choice_space=IntegerRange(lo=-10_000, hi=10_000),
+    focal_distribution={
+        0: 42,
+        1: 20,
+        -1: 10,
+        7: 8,
+        100: 8,
+        -100: 5,
+        1000: 4,
+        42: 3,
+    },
+    logical_decoy=1,
+    decoy_explanation=(
+        "One is often considered the 'first' or 'simplest' positive number, "
+        "and makes logical sense as a default. But zero is the true anchor — "
+        "it's the only number that is neither positive nor negative, "
+        "which makes it stand out from every other option."
+    ),
+)
+
 # ---------------------------------------------------------------------------
 # PLACES & TIMES — coordination on location or time
 # ---------------------------------------------------------------------------
@@ -267,6 +343,114 @@ _PT_MIDNIGHT_OR_NOON = CoordinationPuzzle(
         "Noon (12:00 PM)": 60,
         "6:00 PM": 15,
         "Another time": 8,
+    },
+)
+
+_PT_MUSEUM_FLOOR = CoordinationPuzzle(
+    id="pt_museum_floor",
+    category="places_times",
+    prompt=(
+        "You and a friend got separated in a large multi-floor museum. "
+        "No phones allowed inside. You need to find each other. "
+        "Which floor do you head to?"
+    ),
+    choice_space=OptionSet(options=(
+        "The entrance / ground floor",
+        "The top floor",
+        "The gift shop level",
+        "The café / cafeteria",
+        "The floor with the most famous exhibit",
+    )),
+    focal_distribution={
+        "The entrance / ground floor": 45,
+        "The top floor": 10,
+        "The gift shop level": 12,
+        "The café / cafeteria": 15,
+        "The floor with the most famous exhibit": 18,
+    },
+    logical_decoy="The floor with the most famous exhibit",
+    decoy_explanation=(
+        "The famous exhibit seems clever — surely they'd go somewhere memorable. "
+        "But the entrance wins: it's the universal 'reset' point, the one place "
+        "anyone in a building thinks of when they need to regroup."
+    ),
+)
+
+_PT_FAIR_LOST = CoordinationPuzzle(
+    id="pt_fair_lost",
+    category="places_times",
+    prompt=(
+        "You and a companion got separated at a large outdoor fair. "
+        "No phones. You need to find each other without any plan. "
+        "Where do you head?"
+    ),
+    choice_space=OptionSet(options=(
+        "The main entrance gate",
+        "The Ferris wheel",
+        "The biggest food stall area",
+        "The information booth",
+        "The stage or amphitheatre",
+    )),
+    focal_distribution={
+        "The main entrance gate": 38,
+        "The Ferris wheel": 28,
+        "The biggest food stall area": 10,
+        "The information booth": 16,
+        "The stage or amphitheatre": 8,
+    },
+)
+
+_PT_WEEK_MEETING = CoordinationPuzzle(
+    id="pt_week_meeting",
+    category="places_times",
+    prompt=(
+        "You and a stranger must meet again exactly one week from now. "
+        "No way to discuss a time — you each choose independently. "
+        "What day and rough time do you pick?"
+    ),
+    choice_space=OptionSet(options=(
+        "Monday morning",
+        "Friday afternoon",
+        "Saturday noon",
+        "Sunday noon",
+        "Wednesday noon",
+    )),
+    focal_distribution={
+        "Monday morning": 18,
+        "Friday afternoon": 16,
+        "Saturday noon": 22,
+        "Sunday noon": 20,
+        "Wednesday noon": 24,
+    },
+    logical_decoy="Monday morning",
+    decoy_explanation=(
+        "Monday morning feels like a crisp, logical 'start of the week' anchor. "
+        "But Wednesday noon wins: it sits exactly at the midpoint of the week, "
+        "making it the natural temporal focal point — and 'noon' is the clearest time."
+    ),
+)
+
+_PT_AIRPORT_WAIT = CoordinationPuzzle(
+    id="pt_airport_wait",
+    category="places_times",
+    prompt=(
+        "You and a travel companion each arrive at a large airport separately "
+        "and realize you forgot to agree on a meeting point inside. "
+        "Where do you go?"
+    ),
+    choice_space=OptionSet(options=(
+        "Arrivals hall / baggage claim",
+        "The nearest coffee shop",
+        "The departure gate area",
+        "The main information screen",
+        "The airport entrance / check-in desks",
+    )),
+    focal_distribution={
+        "Arrivals hall / baggage claim": 35,
+        "The nearest coffee shop": 8,
+        "The departure gate area": 12,
+        "The main information screen": 20,
+        "The airport entrance / check-in desks": 25,
     },
 )
 
@@ -425,6 +609,185 @@ _WC_COUNTRY = CoordinationPuzzle(
     },
 )
 
+_WC_PLANET = CoordinationPuzzle(
+    id="wc_planet",
+    category="words_categories",
+    prompt=(
+        "Name a planet in our solar system. "
+        "A stranger names one at exactly the same moment, with no communication. "
+        "You win only if you both name the same planet. "
+        "What do you say?"
+    ),
+    choice_space=OptionSet(options=(
+        "Earth",
+        "Mars",
+        "Saturn",
+        "Jupiter",
+        "Venus",
+        "Mercury",
+        "Neptune",
+        "Uranus",
+    )),
+    focal_distribution={
+        "Earth": 15,
+        "Mars": 35,
+        "Saturn": 20,
+        "Jupiter": 14,
+        "Venus": 8,
+        "Mercury": 4,
+        "Neptune": 3,
+        "Uranus": 1,
+    },
+    logical_decoy="Earth",
+    decoy_explanation=(
+        "Earth is the most obvious planet — it's where everyone is. "
+        "But Mars wins the coordination game: it's the planet people "
+        "have collectively fixated on as 'the other one', giving it "
+        "strong focal salience beyond simple familiarity."
+    ),
+)
+
+_WC_SPORT = CoordinationPuzzle(
+    id="wc_sport",
+    category="words_categories",
+    prompt=(
+        "Name a sport. "
+        "A stranger names one at the same moment. "
+        "You win only if you both name the same sport. "
+        "What do you pick?"
+    ),
+    choice_space=OptionSet(options=(
+        "Football / Soccer",
+        "Basketball",
+        "Tennis",
+        "Baseball",
+        "Swimming",
+        "Cricket",
+        "Running / Athletics",
+    )),
+    focal_distribution={
+        "Football / Soccer": 45,
+        "Basketball": 20,
+        "Tennis": 12,
+        "Baseball": 8,
+        "Swimming": 6,
+        "Cricket": 5,
+        "Running / Athletics": 4,
+    },
+)
+
+_WC_MUSICAL_INSTRUMENT = CoordinationPuzzle(
+    id="wc_musical_instrument",
+    category="words_categories",
+    prompt=(
+        "Name a musical instrument. "
+        "A stranger names one at the same instant. "
+        "You win only if you both name the same instrument. "
+        "What do you say?"
+    ),
+    choice_space=OptionSet(options=(
+        "Piano",
+        "Guitar",
+        "Violin",
+        "Drums",
+        "Trumpet",
+        "Flute",
+        "Bass guitar",
+    )),
+    focal_distribution={
+        "Piano": 28,
+        "Guitar": 35,
+        "Violin": 14,
+        "Drums": 10,
+        "Trumpet": 6,
+        "Flute": 5,
+        "Bass guitar": 2,
+    },
+)
+
+_WC_SEASON = CoordinationPuzzle(
+    id="wc_season",
+    category="words_categories",
+    prompt=(
+        "Name a season. "
+        "A stranger names one at the same moment, with no coordination. "
+        "You win only if you both name the same season. "
+        "Which do you pick?"
+    ),
+    choice_space=OptionSet(options=(
+        "Spring",
+        "Summer",
+        "Autumn / Fall",
+        "Winter",
+    )),
+    focal_distribution={
+        "Spring": 22,
+        "Summer": 40,
+        "Autumn / Fall": 20,
+        "Winter": 18,
+    },
+)
+
+_WC_ELEMENT = CoordinationPuzzle(
+    id="wc_element",
+    category="words_categories",
+    prompt=(
+        "Name a chemical element. "
+        "A stranger names one at the same instant, no communication. "
+        "You win only if you both name the same element. "
+        "What do you say?"
+    ),
+    choice_space=OptionSet(options=(
+        "Gold",
+        "Oxygen",
+        "Carbon",
+        "Iron",
+        "Hydrogen",
+        "Silver",
+        "Helium",
+    )),
+    focal_distribution={
+        "Gold": 35,
+        "Oxygen": 20,
+        "Carbon": 14,
+        "Iron": 12,
+        "Hydrogen": 8,
+        "Silver": 8,
+        "Helium": 3,
+    },
+    logical_decoy="Hydrogen",
+    decoy_explanation=(
+        "Hydrogen is element number 1, the simplest and most abundant in the universe — "
+        "a logically 'first' answer. But gold wins: it's the element with "
+        "the strongest cultural symbol value, the one people picture when "
+        "they hear the word 'element'."
+    ),
+)
+
+_WC_CARD_SUIT = CoordinationPuzzle(
+    id="wc_card_suit",
+    category="words_categories",
+    prompt=(
+        "Name a suit from a standard deck of playing cards — "
+        "hearts, diamonds, clubs, or spades. "
+        "A stranger names one at the same instant. "
+        "You win only if you both name the same suit. "
+        "Which do you pick?"
+    ),
+    choice_space=OptionSet(options=(
+        "Hearts",
+        "Diamonds",
+        "Clubs",
+        "Spades",
+    )),
+    focal_distribution={
+        "Hearts": 42,
+        "Diamonds": 22,
+        "Clubs": 16,
+        "Spades": 20,
+    },
+)
+
 # ---------------------------------------------------------------------------
 # SPLITTING — divide a prize between two anonymous partners
 # ---------------------------------------------------------------------------
@@ -523,33 +886,121 @@ _SP_ROUND_NUMBER = CoordinationPuzzle(
     },
 )
 
+_SP_TIPPED_SCALE = CoordinationPuzzle(
+    id="sp_tipped_scale",
+    category="splitting",
+    prompt=(
+        "You and a stranger are told a $90 prize exists. "
+        "You each privately name a split — your share and theirs — "
+        "that adds up to exactly $90. "
+        "You win only if you both name the same split. "
+        "What do you write?"
+    ),
+    choice_space=Split(total=90),
+    focal_distribution={
+        (45, 45): 55,
+        (60, 30): 14,
+        (30, 60): 14,
+        (90, 0): 6,
+        (0, 90): 6,
+        (50, 40): 3,
+        (40, 50): 2,
+    },
+)
+
+_SP_GENEROUS_SPLIT = CoordinationPuzzle(
+    id="sp_generous_split",
+    category="splitting",
+    prompt=(
+        "You and a stranger can each name a split of 10 points. "
+        "There's a twist: whoever claims fewer points for themselves "
+        "is considered generous — but you still need to match to win anything. "
+        "You win only if both splits add up to 10. "
+        "What split do you name?"
+    ),
+    choice_space=Split(total=10),
+    focal_distribution={
+        (5, 5): 60,
+        (4, 6): 14,
+        (6, 4): 14,
+        (3, 7): 5,
+        (7, 3): 5,
+        (0, 10): 1,
+        (10, 0): 1,
+    },
+    logical_decoy=(4, 6),
+    decoy_explanation=(
+        "Taking 4 and giving 6 signals generosity — a tempting move when the "
+        "framing rewards it. But 5/5 wins: coordination requires the other "
+        "player to also anticipate the same generous gesture, and that symmetry "
+        "is too uncertain. Equal split remains the clearest shared anchor."
+    ),
+)
+
+_SP_INHERITANCE = CoordinationPuzzle(
+    id="sp_inheritance",
+    category="splitting",
+    prompt=(
+        "Two strangers jointly inherit an old estate worth exactly $200. "
+        "Each must privately write how much of the estate they claim. "
+        "They get the inheritance only if both claims add up to exactly $200. "
+        "No negotiation allowed. What do you write?"
+    ),
+    choice_space=Split(total=200),
+    focal_distribution={
+        (100, 100): 68,
+        (120, 80): 10,
+        (80, 120): 10,
+        (150, 50): 5,
+        (50, 150): 5,
+        (200, 0): 1,
+        (0, 200): 1,
+    },
+)
+
 # ---------------------------------------------------------------------------
 # Assemble the bank
 # ---------------------------------------------------------------------------
 
 PUZZLE_BANK: list[CoordinationPuzzle] = [
-    # numbers (5 puzzles, 2 focal-vs-logic)
+    # numbers (8 puzzles, 3 focal-vs-logic)
     _NUM_1_TO_100,
     _NUM_ANY_POSITIVE,
     _NUM_FOCAL_VS_LOGIC_AVERAGE,
     _NUM_LUCKY,
     _NUM_THOUSANDS,
-    # places_times (4 puzzles, 1 focal-vs-logic)
+    _NUM_PRIME,
+    _NUM_DOZEN,
+    _NUM_NEGATIVE,
+    # places_times (8 puzzles, 2 focal-vs-logic)
     _PT_CITY_MEETING,
     _PT_MEETING_TIME,
     _PT_BRIDGE_OR_STATION,
     _PT_MIDNIGHT_OR_NOON,
-    # words_categories (5 puzzles, 1 focal-vs-logic)
+    _PT_MUSEUM_FLOOR,
+    _PT_FAIR_LOST,
+    _PT_WEEK_MEETING,
+    _PT_AIRPORT_WAIT,
+    # words_categories (11 puzzles, 3 focal-vs-logic)
     _WC_FLOWER,
     _WC_COLOR,
     _WC_VEHICLE,
     _WC_UNCOMMON_ANIMAL,
     _WC_COUNTRY,
-    # splitting (4 puzzles, 1 focal-vs-logic)
+    _WC_PLANET,
+    _WC_SPORT,
+    _WC_MUSICAL_INSTRUMENT,
+    _WC_SEASON,
+    _WC_ELEMENT,
+    _WC_CARD_SUIT,
+    # splitting (7 puzzles, 2 focal-vs-logic)
     _SP_EQUAL_SPLIT,
     _SP_UNEQUAL_MERIT,
     _SP_THREE_WAY,
     _SP_ROUND_NUMBER,
+    _SP_TIPPED_SCALE,
+    _SP_GENEROUS_SPLIT,
+    _SP_INHERITANCE,
 ]
 
 # Fast id → puzzle lookup

@@ -61,6 +61,7 @@ from gtlab.ui.theme import (
     arena_reveal,
     render_move_buttons_equal,
     intro_above_fold,
+    transfer_expander,
 )
 from gtlab.ui.utils import ordinal
 from gtlab.concepts.stag_hunt.briefing import (
@@ -598,6 +599,18 @@ def _render_sh_debrief(arena: SHArenaState, progress: dict) -> None:
     st.divider()
     section_title("Final Standings")
     _render_sh_debrief_standings(arena)
+
+    st.divider()
+
+    # C3: light transfer beat — where else does the assurance/coordination shape show up?
+    transfer_expander([
+        "A team deciding whether to fully commit to an ambitious plan — "
+        "each person will only go all-in if they're confident the others will too.",
+        "Neighbors deciding whether to show up and clean up a shared space — "
+        "if most people stay home, the few who show feel like they wasted their trip.",
+        "Two companies deciding whether to adopt the same technical standard — "
+        "each will only switch if the other does, because the standard only works if both use it.",
+    ])
 
     st.divider()
     if st.button("Play again", type="primary", key="sh_play_again"):

@@ -49,6 +49,7 @@ from gtlab.ui.theme import (
     result_banner,
     section_title,
     stat_pills_row,
+    transfer_expander,
 )
 
 # ---------------------------------------------------------------------------

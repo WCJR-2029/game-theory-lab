@@ -200,7 +200,10 @@ _SH_NUDGES: dict[str, dict] = {
             "Hare-Hare is the other equilibrium: neither player gets the best outcome, "
             "but neither gets hurt either. Once both are playing Hare, neither gains "
             "by switching to Stag alone. It's stable — just not as good as the alternative. "
-            "That gap is the coordination problem."
+            "That gap is the coordination problem. "
+            "And here's why Hare is so sticky: Hare pays the same whatever your partner does — "
+            "you always get 3. Stag only beats it if you're pretty sure, better than about "
+            "3-in-4, that they'll show up too. When you're not that sure, the safe choice wins."
         ),
     },
     SH_NUDGE_STAG_ABANDONED: {

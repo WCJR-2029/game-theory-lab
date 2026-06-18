@@ -33,11 +33,12 @@ HOW_IT_WORKS = (
 )
 
 WHAT_TO_WATCH = (
-    "Notice what happens to a rational opponent the moment you throw away the wheel — "
-    "and then notice what happens when two wheel-throwers meet. "
+    "Notice what happens when you throw away the wheel against an opponent who can see it "
+    "and still has a choice to make — and then notice what happens when two wheel-throwers meet. "
     "Pay attention to how your own inclination shifts as you raise the crash-severity dial. "
     "The interesting thing isn't any single round; it's the pattern that emerges "
-    "when commitment becomes available as a tool."
+    "when commitment is available as a tool — and whether it actually works depends entirely "
+    "on who is across from you."
 )
 
 WHY_IT_MATTERS = (

@@ -10,6 +10,8 @@ To add a new concept
       "key":         unique string identifier (used for progress tracking)
       "title":       short display name shown in the menu
       "tagline":     one-sentence hook (plain language, not math-first)
+      "progression": one connective-tissue sentence framing what this concept
+                     adds to the ladder (shown in the menu progression view)
       "render":      the render() callable
       "available":   True when the concept is fully built; False for coming-soon
 
@@ -40,6 +42,10 @@ CONCEPTS: list[dict] = [
             "Two players, two choices — cooperate or defect. "
             "Neither knows what the other will do. Repeated play changes everything."
         ),
+        "progression": (
+            "The core dilemma: cooperate or betray, "
+            "with no way to talk it over first."
+        ),
         "render": _pd_render,
         "available": True,
     },
@@ -49,6 +55,10 @@ CONCEPTS: list[dict] = [
         "tagline": (
             "Hunting the stag together beats hunting hare alone — "
             "but only if you both show up. Talk is cheap. Trust is the question."
+        ),
+        "progression": (
+            "Now you can talk before you move — "
+            "but announcements are free, so trust is still the hard part."
         ),
         "render": _sh_render,
         "available": True,
@@ -60,6 +70,10 @@ CONCEPTS: list[dict] = [
             "Two players on a collision course. Swerve and look timid; go Straight and win — "
             "unless you both do, and then you both crash. Nerve is easy. Commitment is harder."
         ),
+        "progression": (
+            "Now you can make a threat you genuinely cannot take back — "
+            "and that changes everything."
+        ),
         "render": _chk_render,
         "available": True,
     },
@@ -69,6 +83,10 @@ CONCEPTS: list[dict] = [
         "tagline": (
             "You and a silent stranger must pick the same answer — "
             "no communication, no agreement. Some answers just feel inevitable. Why?"
+        ),
+        "progression": (
+            "No conflict here at all — just two people trying to land "
+            "on the same answer without speaking."
         ),
         "render": _sch_render,
         "available": True,
@@ -81,6 +99,10 @@ CONCEPTS: list[dict] = [
             "and rejection means both get nothing. Cold logic says take any offer. "
             "Fairness says otherwise."
         ),
+        "progression": (
+            "Now one side proposes and the other can punish — "
+            "even at a cost to themselves."
+        ),
         "render": _ult_render,
         "available": True,
     },
@@ -91,6 +113,10 @@ CONCEPTS: list[dict] = [
             "You and an opponent, move by move. "
             "Any pattern you fall into gets read and punished. "
             "The only safe play is genuine randomness - which turns out to be harder than it sounds."
+        ),
+        "progression": (
+            "Now your only edge is being unreadable — "
+            "and pure randomness is harder to pull off than it sounds."
         ),
         "render": _ms_render,
         "available": True,

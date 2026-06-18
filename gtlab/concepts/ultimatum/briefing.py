@@ -32,6 +32,12 @@ WHY_IT_MATTERS = (
     "Fairness turns out to be a force that can override cold arithmetic. "
     "People routinely reject offers that would make them better off in pure token terms — "
     "and proposers who know this often offer more than strict logic would suggest. "
+    "Cold logic has a specific prediction for both sides: the responder should accept any "
+    "positive offer (something beats nothing), so the proposer should offer almost nothing. "
+    "But real proposers offer far more than that — because they expect to be punished "
+    "for unfairness, and they're usually right. "
+    "The two halves of the logic travel together: once you see that responders punish, "
+    "you see why proposers give. "
     "These patterns show up wherever resources get divided: negotiations, settlements, "
     "compensation decisions, and anywhere one side sets the terms and the other decides whether to accept."
 )

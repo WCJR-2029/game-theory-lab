@@ -1,4 +1,5 @@
-# Polish Refinement — three-tier plan (cold-review driven)   |   Status: Tier 1 DONE (2026-06-18, 724 tests); building Tier 2
+# Polish Refinement — three-tier plan (cold-review driven)   |   Status: Tiers 1 + 2 DONE (2026-06-18, 742 tests); building Tier 3
+# Note: Tier-2 Wave-2 agents hit a session limit mid-task; Chicken + Schelling completions were finished by hand + verified. Deferred minor item: Schelling partner-draw randomization (existing weighted draw is acceptable).
 
 Source: the 2026-06-18 cold "unseen eye" review (4 independent reviewers). Full notes:
 `~/.claude/scratchpad/2026-06-18_GTL-cold-review.md`. Mike approved all tiers, to be done IN ORDER

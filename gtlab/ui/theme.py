@@ -847,6 +847,127 @@ def intro_above_fold(
     return bool(clicked)
 
 
+def progression_menu(concepts: list[dict], callbacks: dict) -> None:
+    """Render the concept menu as a felt progression ladder.
+
+    Shows a brief framing line above the grid ("Six games, each adding one new
+    twist —"), then lays out cards in a 3-column grid.  Each card shows:
+      - step number + title
+      - the concept's connective-tissue "progression" sentence (what it adds)
+      - the tagline (collapsed detail)
+      - a Play button
+
+    A one-line kinship note beneath the first three cards makes the shared
+    2x2-game engine visible without belaboring it.
+
+    Parameters
+    ----------
+    concepts:  Ordered list of concept dicts from the registry.
+    callbacks: Dict mapping concept key -> zero-argument callable to call on Play.
+    """
+    # Framing line above the grid
+    st.markdown(
+        '<div style="font-size:0.95rem;color:#8B9299;margin-bottom:1.1rem;">'
+        'Six games, each adding one new twist &mdash;'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Two-row grid, 3 columns each
+    cols_per_row = 3
+    rows = [concepts[i:i + cols_per_row] for i in range(0, len(concepts), cols_per_row)]
+
+    for row_idx, row in enumerate(rows):
+        grid_cols = st.columns(len(row), gap="medium")
+        for col, concept in zip(grid_cols, row):
+            step_num = concepts.index(concept) + 1
+            progression_text = concept.get("progression", "")
+            with col:
+                coming_class = "" if concept["available"] else " concept-card-coming"
+                st.markdown(
+                    f"""
+<div class="concept-card{coming_class}">
+  <div style="font-size:0.68rem;font-weight:600;letter-spacing:0.1em;
+              text-transform:uppercase;color:{_ACCENT};margin-bottom:0.3rem;">
+    {step_num}
+  </div>
+  <div class="concept-card-title">{concept["title"]}{'' if concept["available"] else ' <span style="font-size:0.72rem;color:#8B9299;font-weight:400;">— coming soon</span>'}</div>
+  <div style="font-size:0.84rem;color:#C8CDD2;line-height:1.5;
+              margin-bottom:0.5rem;font-style:italic;">
+    {progression_text}
+  </div>
+  <div class="concept-card-tagline">{concept["tagline"]}</div>
+</div>
+""",
+                    unsafe_allow_html=True,
+                )
+                if concept["available"]:
+                    clicked = st.button(
+                        "Play",
+                        key=f"menu_play_{concept['key']}",
+                        type="primary",
+                        width="stretch",
+                    )
+                    if clicked and concept["key"] in callbacks:
+                        callbacks[concept["key"]]()
+                else:
+                    st.button(
+                        "Coming soon",
+                        key=f"menu_coming_{concept['key']}",
+                        disabled=True,
+                        width="stretch",
+                    )
+
+        # After row 0 (concepts 1-3): kinship note
+        if row_idx == 0:
+            st.markdown(
+                f'<div style="font-size:0.78rem;color:{_MUTED};'
+                f'margin-top:0.1rem;margin-bottom:1.2rem;'
+                f'padding-left:0.15rem;">'
+                f'The first three are the same 2&times;2 game with different payoffs '
+                f'&mdash; same structure, very different dynamics.'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+
+def transfer_expander(
+    parallels: list[str],
+    label: str = "Where else does this shape show up?",
+) -> None:
+    """Render a collapsed, dismissable expander listing canonical parallels.
+
+    Place at the end of a debrief screen so curious players can see where the
+    same strategic shape recurs — without any quiz or right-answer pressure.
+
+    Parameters
+    ----------
+    parallels:
+        2-3 short strings, each naming a canonical or whimsical situation that
+        shares the same strategic structure.  Keep them generic/playful; never
+        map onto the player's personal life.
+    label:
+        Expander header text shown when collapsed.
+    """
+    with st.expander(f"  {label}"):
+        st.markdown(
+            f'<div style="font-size:0.84rem;color:{_MUTED};'
+            f'margin-bottom:0.5rem;">'
+            f'The same shape turns up in a surprising range of places:'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+        for parallel in parallels:
+            st.markdown(
+                f'<div style="font-size:0.88rem;color:{_TEXT};'
+                f'line-height:1.6;margin-bottom:0.35rem;'
+                f'padding-left:0.75rem;border-left:2px solid {_BORDER};">'
+                f'{parallel}'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+
+
 def arena_reveal(headline: str, body: str) -> None:
     """Render a calm end-of-run reflective panel — the 'play → feel → reveal' closer.
 

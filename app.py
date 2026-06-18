@@ -15,7 +15,7 @@ Run with:  streamlit run app.py
 import streamlit as st
 
 from gtlab.ui.progress import load_progress
-from gtlab.ui.theme import inject_theme, app_header, concept_card
+from gtlab.ui.theme import inject_theme, app_header, concept_card, progression_menu
 from gtlab.concepts.registry import CONCEPTS
 
 # ---------------------------------------------------------------------------
@@ -69,27 +69,14 @@ def render_menu() -> None:
         subtitle="Learn game theory by playing, not by reading. Pick a concept and step inside.",
     )
 
-    # Responsive 3-column grid of concept cards
-    cols_per_row = 3
-    concepts = CONCEPTS
-    rows = [concepts[i:i + cols_per_row] for i in range(0, len(concepts), cols_per_row)]
+    # Build play callbacks before passing to the progression menu renderer
+    def _make_play_callback(k: str):
+        def _cb():
+            _go_to_concept(k)
+        return _cb
 
-    for row in rows:
-        grid_cols = st.columns(len(row), gap="medium")
-        for col, concept in zip(grid_cols, row):
-            with col:
-                def _make_play_callback(k: str):
-                    def _cb():
-                        _go_to_concept(k)
-                    return _cb
-
-                concept_card(
-                    title=concept["title"],
-                    tagline=concept["tagline"],
-                    key=concept["key"],
-                    available=concept["available"],
-                    on_play=_make_play_callback(concept["key"]),
-                )
+    callbacks = {c["key"]: _make_play_callback(c["key"]) for c in CONCEPTS}
+    progression_menu(CONCEPTS, callbacks)
 
 
 # ---------------------------------------------------------------------------

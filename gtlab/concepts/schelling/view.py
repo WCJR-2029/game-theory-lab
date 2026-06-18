@@ -63,6 +63,7 @@ from gtlab.ui.theme import (
     briefing_expander,
     arena_reveal,
     intro_above_fold,
+    transfer_expander,
 )
 from gtlab.concepts.schelling.briefing import (
     STORY,
@@ -391,6 +392,12 @@ def _render_session_complete(session: SCHSession, progress: dict) -> None:
     reveal_body = _make_reveal_body(session)
     if reveal_body:
         arena_reveal("What just happened in there", reveal_body)
+
+    transfer_expander([
+        "Two friends who lose each other at a fair, each heading for the most obvious landmark.",
+        "A whole country agreeing to drive on the same side of the road — with no one calling a meeting.",
+        "Settling on a round time like noon to meet, just because it's the one that feels obvious to everyone.",
+    ])
 
     nudge_state = get_nudge_state(progress, SCH_CONCEPT_KEY)
     exp = progress.get("concepts", {}).get(SCH_CONCEPT_KEY, 0)
