@@ -157,64 +157,9 @@ class TestPDBriefingExpanderDuringPlay:
 # ---------------------------------------------------------------------------
 
 
-class TestOtherConceptsRegression:
-    def test_stag_hunt_still_plays(self):
-        at = _at_menu()
-        at = _enter_concept(at, "stag_hunt")
-        assert not at.exception
-        at.button(key="sh_start_run").click()
-        at.run()
-        assert not at.exception
-        at.button(key="sh_btn_announce_stag").click()
-        at.run()
-        assert not at.exception
-        at.button(key="sh_btn_commit_stag").click()
-        at.run()
-        assert not at.exception, f"Stag Hunt regression raised: {at.exception}"
-
-    def test_chicken_still_plays(self):
-        at = _at_menu()
-        at = _enter_concept(at, "chicken")
-        assert not at.exception
-        at.button(key="chk_start_run").click()
-        at.run()
-        assert not at.exception
-        at.button(key="chk_btn_keep_wheel").click()
-        at.run()
-        assert not at.exception
-        at.button(key="chk_btn_swerve").click()
-        at.run()
-        assert not at.exception, f"Chicken regression raised: {at.exception}"
-
-    def test_schelling_still_plays(self):
-        at = _at_menu()
-        at = _enter_concept(at, "schelling")
-        assert not at.exception
-        at.button(key="sch_start_session").click()
-        at.run()
-        assert not at.exception
-        btn_keys = [b.key for b in at.button]
-        submit_key = next((k for k in btn_keys if k.startswith("sch_submit_")), None)
-        assert submit_key is not None
-        at.button(key=submit_key).click()
-        at.run()
-        assert not at.exception, f"Schelling regression raised: {at.exception}"
-
-    def test_ultimatum_still_plays(self):
-        at = _at_menu()
-        at = _enter_concept(at, "ultimatum")
-        assert not at.exception
-        at.button(key="ult_start_session").click()
-        at.run()
-        assert not at.exception
-        at.button(key="ult_btn_propose").click()
-        at.run()
-        assert not at.exception, f"Ultimatum regression raised: {at.exception}"
-
-    def test_mixed_strategies_still_enters(self):
-        at = _at_menu()
-        at = _enter_concept(at, "mixed_strategies")
-        assert not at.exception, f"Mixed strategies entry raised: {at.exception}"
+# Cross-concept regressions (all 6 concepts still play with PD briefing added)
+# are covered by test_each_registry_concept_enters_and_plays in
+# test_tier3_engineering.py — removed duplicate copies from this file.
 
 
 # ---------------------------------------------------------------------------

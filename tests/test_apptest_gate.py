@@ -357,37 +357,9 @@ class TestCHKArenaAppTest:
             f"Did not return to menu — keys: {btn_keys}"
         )
 
-    def test_pd_still_plays_with_chicken_registered(self):
-        """Regression: PD arena still works after Chicken is added to the registry."""
-        at = _at_menu()
-        at = _enter_concept(at, "iterated_pd")
-        assert not at.exception
-
-        at.button(key="pd_start_run").click()
-        at.run()
-        assert not at.exception
-
-        at.button(key="pd_btn_cooperate").click()
-        at.run()
-        assert not at.exception, f"PD regression raised exception: {at.exception}"
-
-    def test_sh_still_plays_with_chicken_registered(self):
-        """Regression: Stag Hunt arena still works after Chicken is added."""
-        at = _at_menu()
-        at = _enter_concept(at, "stag_hunt")
-        assert not at.exception
-
-        at.button(key="sh_start_run").click()
-        at.run()
-        assert not at.exception
-
-        at.button(key="sh_btn_announce_stag").click()
-        at.run()
-        assert not at.exception
-
-        at.button(key="sh_btn_commit_stag").click()
-        at.run()
-        assert not at.exception, f"SH regression raised exception: {at.exception}"
+    # Cross-concept regression (PD/SH still play with Chicken registered) is
+    # covered by the parametrized test_each_registry_concept_enters_and_plays
+    # in test_tier3_engineering.py — removed duplicate copies here.
 
 
 # ---------------------------------------------------------------------------
@@ -613,45 +585,9 @@ class TestSCHArenaAppTest:
             f"Did not return to menu — keys: {btn_keys}"
         )
 
-    def test_pd_still_plays_with_schelling_registered(self):
-        """Regression: PD arena still works after Schelling is added."""
-        at = _at_menu()
-        at = _enter_concept(at, "iterated_pd")
-        assert not at.exception
-        at.button(key="pd_start_run").click()
-        at.run()
-        assert not at.exception
-        at.button(key="pd_btn_cooperate").click()
-        at.run()
-        assert not at.exception, f"PD regression raised: {at.exception}"
-
-    def test_sh_still_plays_with_schelling_registered(self):
-        """Regression: Stag Hunt still works after Schelling is added."""
-        at = _at_menu()
-        at = _enter_concept(at, "stag_hunt")
-        assert not at.exception
-        at.button(key="sh_start_run").click()
-        at.run()
-        assert not at.exception
-        at.button(key="sh_btn_announce_stag").click()
-        at.run()
-        at.button(key="sh_btn_commit_stag").click()
-        at.run()
-        assert not at.exception, f"SH regression raised: {at.exception}"
-
-    def test_chk_still_plays_with_schelling_registered(self):
-        """Regression: Chicken still works after Schelling is added."""
-        at = _at_menu()
-        at = _enter_concept(at, "chicken")
-        assert not at.exception
-        at.button(key="chk_start_run").click()
-        at.run()
-        assert not at.exception
-        at.button(key="chk_btn_keep_wheel").click()
-        at.run()
-        at.button(key="chk_btn_swerve").click()
-        at.run()
-        assert not at.exception, f"CHK regression raised: {at.exception}"
+    # Cross-concept regressions (PD/SH/CHK still play with Schelling registered)
+    # are covered by test_each_registry_concept_enters_and_plays in
+    # test_tier3_engineering.py — removed duplicate copies here.
 
 
 # ---------------------------------------------------------------------------
@@ -834,60 +770,6 @@ class TestULTArenaAppTest:
             f"Did not return to menu — keys: {btn_keys}"
         )
 
-    # --- Regression: all four prior concepts still work ---
-
-    def test_pd_still_plays_with_ultimatum_registered(self):
-        """Regression: PD arena still works after Ultimatum is added."""
-        at = _at_menu()
-        at = _enter_concept(at, "iterated_pd")
-        assert not at.exception
-        at.button(key="pd_start_run").click()
-        at.run()
-        assert not at.exception
-        at.button(key="pd_btn_cooperate").click()
-        at.run()
-        assert not at.exception, f"PD regression raised: {at.exception}"
-
-    def test_sh_still_plays_with_ultimatum_registered(self):
-        """Regression: Stag Hunt still works after Ultimatum is added."""
-        at = _at_menu()
-        at = _enter_concept(at, "stag_hunt")
-        assert not at.exception
-        at.button(key="sh_start_run").click()
-        at.run()
-        assert not at.exception
-        at.button(key="sh_btn_announce_stag").click()
-        at.run()
-        at.button(key="sh_btn_commit_stag").click()
-        at.run()
-        assert not at.exception, f"SH regression raised: {at.exception}"
-
-    def test_chk_still_plays_with_ultimatum_registered(self):
-        """Regression: Chicken still works after Ultimatum is added."""
-        at = _at_menu()
-        at = _enter_concept(at, "chicken")
-        assert not at.exception
-        at.button(key="chk_start_run").click()
-        at.run()
-        assert not at.exception
-        at.button(key="chk_btn_keep_wheel").click()
-        at.run()
-        at.button(key="chk_btn_swerve").click()
-        at.run()
-        assert not at.exception, f"CHK regression raised: {at.exception}"
-
-    def test_sch_still_plays_with_ultimatum_registered(self):
-        """Regression: Schelling still works after Ultimatum is added."""
-        at = _at_menu()
-        at = _enter_concept(at, "schelling")
-        assert not at.exception
-        at.button(key="sch_start_session").click()
-        at.run()
-        assert not at.exception
-        # Submit the first puzzle (default pick)
-        btn_keys = [b.key for b in at.button]
-        submit_key = next((k for k in btn_keys if k.startswith("sch_submit_")), None)
-        assert submit_key is not None, f"No Schelling submit button. Keys: {btn_keys}"
-        at.button(key=submit_key).click()
-        at.run()
-        assert not at.exception, f"SCH regression raised: {at.exception}"
+    # Cross-concept regressions (PD/SH/CHK/SCH still play with Ultimatum registered)
+    # are covered by test_each_registry_concept_enters_and_plays in
+    # test_tier3_engineering.py — removed duplicate copies here.

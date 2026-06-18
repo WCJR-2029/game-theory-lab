@@ -1,5 +1,5 @@
-# Polish Refinement — three-tier plan (cold-review driven)   |   Status: Tiers 1 + 2 DONE (2026-06-18, 742 tests); building Tier 3
-# Note: Tier-2 Wave-2 agents hit a session limit mid-task; Chicken + Schelling completions were finished by hand + verified. Deferred minor item: Schelling partner-draw randomization (existing weighted draw is acceptable).
+# Polish Refinement — three-tier plan (cold-review driven)   |   Status: ALL THREE TIERS DONE (2026-06-18, 778 tests)
+# Tier 1 (Experience), Tier 2 (Coherence & Teaching), Tier 3 (proportionate dedup + test rebalance) all complete + verified + pushed. T1 scope was Mike's call = proportionate dedup (not full loop unification). Deferred minor item: Schelling partner-draw randomization (existing weighted draw is acceptable).
 
 Source: the 2026-06-18 cold "unseen eye" review (4 independent reviewers). Full notes:
 `~/.claude/scratchpad/2026-06-18_GTL-cold-review.md`. Mike approved all tiers, to be done IN ORDER

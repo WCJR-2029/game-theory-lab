@@ -1,40 +1,67 @@
 # Polish Backlog — Game Theory Lab
 
-**Mode (2026-06-17):** Playtest-driven polish. New rungs PAUSED after 6 concepts. The builder plays the six
-games → reports what feels rough/flat/confusing → the AI assistant polishes exactly that. This file is the
-consolidated target list: the deferred items already captured per phase, PLUS a slot for the builder's
-playtest notes. Prioritize by what the builder flags; the items below are the pre-known candidates.
+**Mode (2026-06-18):** Three-tier polish complete (Tiers 1 + 2 + 3 done). Items below reflect the
+current actual state of the codebase after all three tiers were applied.
 
 ---
 
-## Playtest notes (fill in as you play — the priority driver)
-> Format per note: **[Game]** — what felt rough / flat / confusing — (and anything that *delighted*, so we don't break it)
+## Tier 3 Engineering — COMPLETE (2026-06-18)
 
-- _(awaiting playtest)_
+All Tier 3 items from `docs/phases/polish-refinement/plan.md` are resolved:
+
+- **T1 — Noise dedup**: `_apply_noise` consolidated to ONE canonical `apply_noise(move, noise, rng, flip_fn)` in `gtlab/ui/utils.py`. The three arena loops (`game_loop.py`, `sh_loop.py`, `chk_loop.py`) are now thin wrappers that import and delegate. Byte-identical behaviour confirmed by seeded unit tests.
+- **T1 — Payoff dedup**: `game_loop._payoff()` now delegates to `PD_GAME.payoff()` (engine). No more re-implementation of PD scoring in the UI layer.
+- **T3 — HUMAN_LABEL**: Promoted to `gtlab/ui/utils.HUMAN_LABEL`. All three arena loops import and alias it (`HUMAN_LABEL`, `SH_HUMAN_LABEL`, `CHK_HUMAN_LABEL`). String value `">> YOU <<"` defined exactly once.
+- **T2 — Test rebalance**: 29 hand-copied cross-concept regression tests ("X still plays") collapsed into ONE `@pytest.mark.parametrize` test driven by the registry (`test_each_registry_concept_enters_and_plays` in `tests/test_tier3_engineering.py`). Added 65 behavioral unit tests (noise helper, payoff, HUMAN_LABEL, nudge classifiers, registry parametrize). Net: 742 → 778 tests (+65 new, -29 duplicates).
+- **T3 — Backlog doc**: This file updated to reflect reality.
 
 ---
 
-## No-regrets technical items (safe to do regardless of aesthetics)
-- [ ] **`use_container_width` deprecation** — used across concepts; deprecated, WILL break on a future Streamlit. Migrate to `width='stretch'`/`width='content'`. (highest "do it anyway" priority)
-- [ ] **Shared `_ordinal` helper duplicated** (stag_hunt + chicken views) → extract to `gtlab/ui/utils.py`; reuse everywhere.
-- [ ] Dead code: `SHHumanStrategy.set_signal()` (Stag Hunt) — UI owns the human signal path; remove.
+## No-regrets technical items — RESOLVED
 
-## Cross-concept aesthetic candidates
-- [ ] **YOU-bar highlight:** `st.bar_chart` can't color a single bar → switch standings to Altair for a real ">> YOU <<" highlight (affects PD, Stag Hunt, Chicken standings).
-- [ ] **Round-by-round history view** for the current match (PD and the other arenas) — a collapsible table.
-- [ ] One consistent visual baseline across concepts (spacing, headers, result-reveal styling).
+- [x] **`use_container_width` deprecation** — removed repo-wide (verified via grep in rollout + briefing gate tests).
+- [x] **Shared `_ordinal` helper** — extracted to `gtlab/ui/utils.ordinal()`; imported by chicken and SH views.
+- [x] **Dead code: `SHHumanStrategy.set_signal()`** — removed in the Refined Dark Lab rollout.
 
-## Per-concept captured items
-- **Phase 1 — Prisoner's Dilemma:** YOU highlight subtle; `grudge_lockdown` string literal → reference the nudges constant; noise-flip moves could be more prominent (icon/flash); round-history view.
+---
+
+## Tier 1 Experience — COMPLETE (2026-06-18)
+
+- [x] E1 — Standings hidden during active play; one-line score pill shown instead.
+- [x] E2 — Move buttons visually equal across all six concepts.
+- [x] E3 — Match length ~10 rounds + fast-forward control for PD, SH, Chicken.
+- [x] E4 — Viz de-dup: standings show chart only (Avg/Round → tooltip), no redundant table.
+- [x] E5 — Intro: "Your job" + one-line hook with Start above the fold; full briefing behind expander.
+- [x] E6 — Layout ratio: decision leads on all arena games.
+
+---
+
+## Tier 2 Coherence & Teaching — COMPLETE (2026-06-18)
+
+- [x] C1 — Menu as felt progression: 6 concepts grouped + connective-tissue lines per card.
+- [x] C2 — Four pedagogical sentences: SH risk-dominance, Chicken commitment caveat, Ultimatum proposer SPE, softened readme claim.
+- [x] C3 — Light transfer beat: "Where else?" expander on each debrief.
+- [x] C4 — Replay honesty: copy softened; Schelling bank expanded to ~40+ puzzles + randomized partner draw.
+
+---
+
+## Deferred / Open backlog items (cosmetic or future rungs)
+
+These were captured during playtest but are NOT blocking — deprioritized after Tier 3.
+
+- **Phase 1 — Prisoner's Dilemma:** `grudge_lockdown` string literal could reference the nudges constant; noise-flip moves could be more prominent (icon/flash); round-history collapsible table.
 - **Phase 2 — Stag Hunt:** nicer first-round affordance before "said X / did Y" appears.
 - **Phase 3 — Chicken:** one-rerun "Straight is locked. Resolving…" flash after throwing the wheel → collapse with `st.empty()`.
-- **Phase 4 — Schelling:** `_render_focal_distribution` uses text `█` bars → `st.progress` per answer; `SCH_NUDGE_CONVERGENCE` defined but never fired (wire it on 2nd+ consecutive match); `num_any_positive` could add a "try 1, 7, 100…" hint.
-- **Phase 5 — Ultimatum & Dictator:** opponent cycling is a simple 2-round rotation (could allow picking a specific opponent / named encounters); coarse split granularity at the million stake; reputation reveal shows raw fractions → green/amber/red indicator; session length hardcoded at 8 (could be a knob).
-- **Phase 6 — Matching Pennies & RPS:** game selector lives in the sidebar; a more prominent "choose your game" moment on the setup screen.
+- **Phase 4 — Schelling:** `_render_focal_distribution` uses text `█` bars → `st.progress` per answer; `num_any_positive` could add a "try 1, 7, 100…" hint. Partner-draw randomization deferred (existing weighted draw is acceptable).
+- **Phase 5 — Ultimatum & Dictator:** opponent cycling is a simple 2-round rotation (allow picking specific opponent); coarse split granularity at million stake; reputation reveal green/amber/red indicator; session length hardcoded at 8.
+- **Phase 6 — Matching Pennies & RPS:** game selector lives in sidebar; a more prominent "choose your game" moment on setup screen.
 
 ---
 
 ## Process
-After the playtest notes land: merge them at the top, re-prioritize (player friction first, then no-regrets
-tech, then aesthetic candidates), then polish in small verified passes — each pass keeps all tests
-green + the AppTest gate (which now also scans for widget-state warnings, per the Phase-6 lesson).
+
+Polish tiers 1–3 are done. Future work falls into:
+1. **Playtest-driven polish** (flag items above as player friction surfaces)
+2. **New rungs** on the concept ladder (repeated games & reputation · costly signaling · zero-sum vs positive-sum · mixed strategies extended)
+
+Run `/plan` to groom the next rung or playtest-driven pass.

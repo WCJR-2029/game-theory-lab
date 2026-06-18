@@ -28,6 +28,7 @@ from gtlab.concepts.chicken.strategies import (
     CHK_STRATEGY_CLASSES,
     CHK_DEFAULT_SELECTED,
 )
+from gtlab.ui.utils import apply_noise, HUMAN_LABEL as _HUMAN_LABEL_IMPORT
 
 # ---------------------------------------------------------------------------
 # NOTE: CHKHumanStrategy was removed in the Refined Dark Lab rollout.
@@ -45,7 +46,10 @@ STRAIGHT = DEFECT
 # ---------------------------------------------------------------------------
 
 CHK_MATCH_LENGTH = 10
-CHK_HUMAN_LABEL = ">> YOU <<"
+#: Human display label in standings.
+#: Imported from gtlab.ui.utils — kept here as a module alias for backward
+#: compatibility so existing imports of CHK_HUMAN_LABEL from chk_loop still work.
+CHK_HUMAN_LABEL = _HUMAN_LABEL_IMPORT
 CHK_CONCEPT_KEY = "chicken"
 
 
@@ -60,10 +64,14 @@ def _chk_payoff(game: Any, my_move: Move, opp_move: Move) -> int:
 def _apply_noise_chk(
     move: Move, noise: float, rng: random.Random, game: Any
 ) -> tuple[Move, bool]:
-    """Flip move with probability ``noise`` using game.flip()."""
-    if noise > 0.0 and rng.random() < noise:
-        return game.flip(move), True
-    return move, False
+    """Flip move with probability ``noise`` using game.flip().
+
+    Thin wrapper around the shared gtlab.ui.utils.apply_noise using
+    game.flip as the flip function — byte-identical to the previous
+    private implementation and supports the parameterizable Chicken game
+    (the game object carries the correct flip for its move set).
+    """
+    return apply_noise(move, noise, rng, game.flip)
 
 
 # ---------------------------------------------------------------------------

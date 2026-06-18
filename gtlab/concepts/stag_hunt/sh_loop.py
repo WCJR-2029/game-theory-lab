@@ -29,6 +29,7 @@ from gtlab.concepts.stag_hunt.strategies import (
     SH_STRATEGY_CLASSES,
     SH_DEFAULT_SELECTED,
 )
+from gtlab.ui.utils import apply_noise, HUMAN_LABEL as _HUMAN_LABEL_IMPORT
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -39,7 +40,9 @@ from gtlab.concepts.stag_hunt.strategies import (
 SH_MATCH_LENGTH = 10
 
 #: Human display label in standings.
-SH_HUMAN_LABEL = ">> YOU <<"
+#: Imported from gtlab.ui.utils — kept here as a module alias for backward
+#: compatibility so existing imports of SH_HUMAN_LABEL from sh_loop still work.
+SH_HUMAN_LABEL = _HUMAN_LABEL_IMPORT
 
 #: Progress/nudge concept key.
 SH_CONCEPT_KEY = "stag_hunt"
@@ -55,10 +58,13 @@ def _sh_payoff(my_move: Move, opp_move: Move) -> int:
 
 
 def _apply_noise_sh(move: Move, noise: float, rng: random.Random) -> tuple[Move, bool]:
-    """Flip move with probability ``noise`` using game.flip()."""
-    if noise > 0.0 and rng.random() < noise:
-        return STAG_HUNT_GAME.flip(move), True
-    return move, False
+    """Flip move with probability ``noise`` using game.flip().
+
+    Thin wrapper around the shared gtlab.ui.utils.apply_noise using
+    STAG_HUNT_GAME.flip as the flip function — byte-identical to the
+    previous private implementation.
+    """
+    return apply_noise(move, noise, rng, STAG_HUNT_GAME.flip)
 
 
 # ---------------------------------------------------------------------------

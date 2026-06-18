@@ -335,75 +335,9 @@ class TestMSAppTestGate:
 
 # ---------------------------------------------------------------------------
 # 4. Regression — other 5 concepts still play cleanly
+# Covered by test_each_registry_concept_enters_and_plays in
+# test_tier3_engineering.py — removed duplicate copies from this file.
 # ---------------------------------------------------------------------------
-
-
-class TestOtherConceptsRegressionRollout:
-    def test_pd_still_plays(self):
-        at = _at_menu()
-        at.button(key="menu_play_iterated_pd").click()
-        at.run()
-        assert not at.exception
-        at.button(key="pd_start_run").click()
-        at.run()
-        assert not at.exception
-        at.button(key="pd_btn_cooperate").click()
-        at.run()
-        assert not at.exception, f"PD regression raised: {at.exception}"
-
-    def test_stag_hunt_still_plays(self):
-        at = _at_menu()
-        at.button(key="menu_play_stag_hunt").click()
-        at.run()
-        assert not at.exception
-        at.button(key="sh_start_run").click()
-        at.run()
-        assert not at.exception
-        at.button(key="sh_btn_announce_stag").click()
-        at.run()
-        assert not at.exception
-        at.button(key="sh_btn_commit_stag").click()
-        at.run()
-        assert not at.exception
-
-    def test_chicken_still_plays(self):
-        at = _at_menu()
-        at.button(key="menu_play_chicken").click()
-        at.run()
-        assert not at.exception
-        at.button(key="chk_start_run").click()
-        at.run()
-        assert not at.exception
-        at.button(key="chk_btn_keep_wheel").click()
-        at.run()
-        assert not at.exception
-        at.button(key="chk_btn_swerve").click()
-        at.run()
-        assert not at.exception
-
-    def test_schelling_still_plays(self):
-        at = _at_menu()
-        at.button(key="menu_play_schelling").click()
-        at.run()
-        assert not at.exception
-        at.button(key="sch_start_session").click()
-        at.run()
-        assert not at.exception
-        btn_keys = [b.key for b in at.button]
-        submit_key = next((k for k in btn_keys if k.startswith("sch_submit_")), None)
-        assert submit_key is not None, f"No sch_submit_ found. Keys: {btn_keys}"
-        at.button(key=submit_key).click()
-        at.run()
-        assert not at.exception
-
-    def test_ultimatum_still_plays(self):
-        at = _at_menu()
-        at.button(key="menu_play_ultimatum").click()
-        at.run()
-        assert not at.exception
-        at.button(key="ult_start_session").click()
-        at.run()
-        assert not at.exception
 
 
 # ---------------------------------------------------------------------------

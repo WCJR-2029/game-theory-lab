@@ -27,7 +27,9 @@ from gtlab.engine import (
     HumanStrategy,
     run_tournament, Standing,
     PAYOFF_R, PAYOFF_T, PAYOFF_S, PAYOFF_P,
+    PD_GAME,
 )
+from gtlab.ui.utils import apply_noise, HUMAN_LABEL as _HUMAN_LABEL_IMPORT
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -38,7 +40,9 @@ from gtlab.engine import (
 MATCH_LENGTH = 10
 
 #: Human player display label in standings.
-HUMAN_LABEL = ">> YOU <<"
+#: Imported from gtlab.ui.utils — kept here as a module alias for backward
+#: compatibility so existing imports of HUMAN_LABEL from game_loop still work.
+HUMAN_LABEL = _HUMAN_LABEL_IMPORT
 
 #: The concept key used for progress/nudge state tracking.
 CONCEPT_KEY = "iterated_pd"
@@ -96,26 +100,23 @@ def build_fresh_roster(selected_names: list[str]) -> list[Strategy]:
 
 
 # ---------------------------------------------------------------------------
-# Payoff helper (mirrors match.py _payoff, but without the private import)
+# Payoff helper — delegates to the engine's PD_GAME.payoff() so there is
+# exactly one implementation of PD scoring in the codebase.
 # ---------------------------------------------------------------------------
 
 
 def _payoff(my_move: Move, opp_move: Move) -> int:
-    if my_move == COOPERATE and opp_move == COOPERATE:
-        return PAYOFF_R
-    if my_move == DEFECT and opp_move == COOPERATE:
-        return PAYOFF_T
-    if my_move == COOPERATE and opp_move == DEFECT:
-        return PAYOFF_S
-    return PAYOFF_P
+    return PD_GAME.payoff(my_move, opp_move)
 
 
 def _apply_noise(move: Move, noise: float, rng: random.Random) -> tuple[Move, bool]:
-    """Apply per-move noise.  Returns (actual_move, was_flipped)."""
-    if noise > 0.0 and rng.random() < noise:
-        flipped = DEFECT if move == COOPERATE else COOPERATE
-        return flipped, True
-    return move, False
+    """Apply per-move noise.  Returns (actual_move, was_flipped).
+
+    Thin wrapper around the shared gtlab.ui.utils.apply_noise using PD_GAME.flip
+    as the flip function (PD flip = COOPERATE↔DEFECT, which is the correct PD
+    noise behaviour and byte-identical to the previous private implementation).
+    """
+    return apply_noise(move, noise, rng, PD_GAME.flip)
 
 
 # ---------------------------------------------------------------------------
