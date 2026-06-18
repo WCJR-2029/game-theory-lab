@@ -44,7 +44,7 @@ STRAIGHT = DEFECT
 # Constants
 # ---------------------------------------------------------------------------
 
-CHK_MATCH_LENGTH = 20
+CHK_MATCH_LENGTH = 10
 CHK_HUMAN_LABEL = ">> YOU <<"
 CHK_CONCEPT_KEY = "chicken"
 
@@ -374,6 +374,38 @@ def _finalize_chk_match(state: CHKArenaState) -> None:
         state.player_committed_this_round = False
         state.opp_committed_this_round = False
         state.bots[state.current_opponent_idx].reset()
+
+
+# ---------------------------------------------------------------------------
+# Fast-forward — resolve remaining rounds of the current match instantly
+# ---------------------------------------------------------------------------
+
+
+def fast_forward_chk_match(state: CHKArenaState) -> None:
+    """Play out the remaining rounds of the current Chicken match instantly.
+
+    The player's last actual move is repeated (Swerve or Straight).
+    Defaults to SWERVE (COOPERATE) if no move has been made yet.
+    Does NOT auto-throw the wheel — fast-forward always keeps the wheel
+    and repeats the last move choice.  Mutates state in place.
+    """
+    if state.run_complete:
+        return
+
+    # Repeat last move, or default to Swerve if the round hasn't started.
+    # We also need to reset the commit phase so play_round can be called directly.
+    default_move = state.last_player_actual if state.last_player_actual is not None else SWERVE
+
+    while state.rounds_this_match < CHK_MATCH_LENGTH and not state.run_complete:
+        # Ensure commit phase is resolved as "keep the wheel" so play_round runs
+        if not state.commit_decided:
+            state.player_committed_this_round = False
+            state.opp_committed_this_round = state.bots[state.current_opponent_idx].commit(
+                state.opp_history
+            )
+            state.commit_decided = True
+
+        play_round(state, default_move)
 
 
 # ---------------------------------------------------------------------------

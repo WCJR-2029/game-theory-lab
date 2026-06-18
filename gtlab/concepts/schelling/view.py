@@ -62,6 +62,7 @@ from gtlab.ui.theme import (
     game_briefing,
     briefing_expander,
     arena_reveal,
+    intro_above_fold,
 )
 from gtlab.concepts.schelling.briefing import (
     STORY,
@@ -556,44 +557,40 @@ def render() -> None:
 
     session: SCHSession | None = st.session_state[_KEY_SESSION]
 
-    # --- Setup / Start ---
+    # --- Setup / Start (E5: Start above the fold) ---
     if session is None:
-        game_briefing(
-            story=STORY,
-            how_it_works=HOW_IT_WORKS,
-            what_to_watch=WHAT_TO_WATCH,
-            why_it_matters=WHY_IT_MATTERS,
-            your_job=YOUR_JOB,
-        )
-
-        st.divider()
-
-        nudge_state = get_nudge_state(progress, SCH_CONCEPT_KEY)
-        if nudge_state == NudgeState.NEW:
-            result_banner(
-                "neutral",
-                "First time here?",
-                "Just pick whatever feels obvious to you - there's no trick. "
-                "The interesting part comes after the reveal.",
+        # E5: hook + Your Job + Start button all above the fold;
+        # full briefing tucked into a collapsed expander below.
+        def _briefing_content() -> None:
+            game_briefing(
+                story=STORY,
+                how_it_works=HOW_IT_WORKS,
+                what_to_watch=WHAT_TO_WATCH,
+                why_it_matters=WHY_IT_MATTERS,
             )
 
-        col_start, _ = st.columns([1, 2])
-        with col_start:
-            if st.button(
-                "Start session",
-                type="primary",
-                width="stretch",
-                key="sch_start_session",
-            ):
-                session = init_sch_session(hard_mode, selected_categories)
-                st.session_state[_KEY_SESSION] = session
+        started = intro_above_fold(
+            hook=(
+                "You and a silent stranger must independently pick the same answer — "
+                "no communication, no agreement, just whatever feels inevitable."
+            ),
+            your_job=YOUR_JOB,
+            start_button_label="Start session",
+            start_button_key="sch_start_session",
+            briefing_expander_label="Read the full briefing",
+            briefing_content_fn=_briefing_content,
+        )
 
-                nudge_state = get_nudge_state(progress, SCH_CONCEPT_KEY)
-                if nudge_state == NudgeState.NEW:
-                    session.last_nudge_event = SCH_NUDGE_ROUND_START
-                    st.session_state[_KEY_LAST_NUDGE] = SCH_NUDGE_ROUND_START
+        if started:
+            session = init_sch_session(hard_mode, selected_categories)
+            st.session_state[_KEY_SESSION] = session
 
-                st.rerun()
+            nudge_state = get_nudge_state(progress, SCH_CONCEPT_KEY)
+            if nudge_state == NudgeState.NEW:
+                session.last_nudge_event = SCH_NUDGE_ROUND_START
+                st.session_state[_KEY_LAST_NUDGE] = SCH_NUDGE_ROUND_START
+
+            st.rerun()
         return
 
     # --- Session complete ---

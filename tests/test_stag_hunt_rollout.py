@@ -3,13 +3,16 @@ Stag Hunt Rollout test gate.
 
 Verifies:
   1. briefing.py constants exist and are non-empty strings.
-  2. YOUR_JOB strip is present on the setup screen.
+  2. YOUR_JOB strip is present on the setup screen (E5: above the fold).
   3. The briefing expander is present during active play.
   4. The arena_reveal (debrief) renders after a full run.
-  5. No Arrow/serialization errors in standings (string cells).
+  5. No Arrow/serialization errors in standings.
   6. No use_container_width in stag_hunt source files.
   7. No mike/herak personal refs in stag_hunt source files.
   8. Other 5 concepts still enter and play (regression).
+  9. E1: full leaderboard hidden during active play; one-line score shown.
+  10. E3: fast-forward button present during active play.
+  11. E4: debrief shows no dataframe/table (chart only).
 """
 
 from __future__ import annotations
@@ -146,20 +149,20 @@ class TestBriefingExpanderDuringPlay:
 
 
 # ---------------------------------------------------------------------------
-# 4. Arena reveal in debrief (full run: 20 rounds × 7 bots = 140 rounds)
+# 4. Arena reveal in debrief (full run: 10 rounds × 7 bots = 70 rounds)
 # ---------------------------------------------------------------------------
 
 class TestArenaRevealDebrief:
     def test_debrief_shows_after_full_run(self):
-        """Play all 20 rounds vs first bot — arena should show match-complete state."""
+        """Play all 10 rounds vs first bot — arena should show match-complete state."""
         at = _at_menu()
         at = _enter_concept(at, "stag_hunt")
         at.button(key="sh_start_run").click()
         at.run()
         assert not at.exception
 
-        # Play 20 full rounds to finish match 1
-        for i in range(20):
+        # Play 10 full rounds to finish match 1 (SH_MATCH_LENGTH = 10)
+        for i in range(10):
             btn_keys = [b.key for b in at.button]
             if "sh_btn_announce_stag" not in btn_keys:
                 break
@@ -197,8 +200,8 @@ class TestStandingsNoArrowError:
         at.run()
         assert not at.exception
 
-        # Play 20 rounds to complete match 1
-        for i in range(20):
+        # Play 10 rounds to complete match 1 (SH_MATCH_LENGTH = 10)
+        for i in range(10):
             btn_keys = [b.key for b in at.button]
             if "sh_btn_announce_stag" not in btn_keys:
                 break
@@ -215,6 +218,99 @@ class TestStandingsNoArrowError:
                 break
 
         assert not at.exception, f"Arrow error after match: {at.exception}"
+
+
+# ---------------------------------------------------------------------------
+# 9. E1: hidden live standings, visible one-line score during active play
+# ---------------------------------------------------------------------------
+
+class TestE1HiddenStandingsDuringPlay:
+    def test_no_dataframe_during_active_play(self):
+        """Full leaderboard table/dataframe must NOT appear during active play (E1)."""
+        at = _at_menu()
+        at = _enter_concept(at, "stag_hunt")
+        at.button(key="sh_start_run").click()
+        at.run()
+        assert not at.exception
+        # No live dataframe during play
+        assert len(at.dataframe) == 0, (
+            f"Live dataframe found during active play — E1 violation. "
+            f"Dataframe count: {len(at.dataframe)}"
+        )
+
+    def test_active_score_pill_present(self):
+        """One-line score (stat pills row) should be visible during active play (E1)."""
+        at = _at_menu()
+        at = _enter_concept(at, "stag_hunt")
+        at.button(key="sh_start_run").click()
+        at.run()
+        assert not at.exception
+        all_md = " ".join(m.value for m in at.markdown)
+        # stat_pills_row renders "Total" and "This match" and "Round" labels
+        assert "total" in all_md.lower() or "match" in all_md.lower(), (
+            "Expected stat pill labels not found in active play markdown"
+        )
+
+
+# ---------------------------------------------------------------------------
+# 10. E3: fast-forward button present during signal phase
+# ---------------------------------------------------------------------------
+
+class TestE3FastForward:
+    def test_fast_forward_button_present(self):
+        """Play out this match button should appear during signal phase (E3)."""
+        at = _at_menu()
+        at = _enter_concept(at, "stag_hunt")
+        at.button(key="sh_start_run").click()
+        at.run()
+        assert not at.exception
+        btn_keys = [b.key for b in at.button]
+        assert "sh_btn_fast_forward" in btn_keys, (
+            f"Fast-forward button not found. Button keys: {btn_keys}"
+        )
+
+    def test_fast_forward_completes_match(self):
+        """Clicking fast-forward should resolve remaining rounds without exception."""
+        at = _at_menu()
+        at = _enter_concept(at, "stag_hunt")
+        at.button(key="sh_start_run").click()
+        at.run()
+        assert not at.exception
+        at.button(key="sh_btn_fast_forward").click()
+        at.run()
+        assert not at.exception, f"Fast-forward raised: {at.exception}"
+
+
+# ---------------------------------------------------------------------------
+# 11. E4: debrief shows chart only (no dataframe)
+# ---------------------------------------------------------------------------
+
+class TestE4DebriefChartOnly:
+    def test_debrief_no_dataframe(self):
+        """Debrief must show leaderboard chart only — no redundant dataframe (E4)."""
+        at = _at_menu()
+        at = _enter_concept(at, "stag_hunt")
+        at.button(key="sh_start_run").click()
+        at.run()
+        assert not at.exception
+
+        # Fast-forward through all matches to reach debrief
+        while not at.exception:
+            btn_keys = [b.key for b in at.button]
+            if "sh_btn_fast_forward" in btn_keys:
+                at.button(key="sh_btn_fast_forward").click()
+                at.run()
+                assert not at.exception, f"FF raised: {at.exception}"
+            elif "sh_play_again" in btn_keys:
+                break
+            else:
+                break
+
+        assert not at.exception
+        assert len(at.dataframe) == 0, (
+            f"Redundant dataframe found on debrief — E4 violation. "
+            f"Count: {len(at.dataframe)}"
+        )
 
 
 # ---------------------------------------------------------------------------

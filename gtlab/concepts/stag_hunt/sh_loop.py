@@ -34,8 +34,9 @@ from gtlab.concepts.stag_hunt.strategies import (
 # Constants
 # ---------------------------------------------------------------------------
 
-#: Fixed match length (same as PD per design).
-SH_MATCH_LENGTH = 20
+#: Fixed match length — 10 rounds keeps each match short enough to reveal the
+#: cross-match pattern quickly while still showing per-round dynamics.
+SH_MATCH_LENGTH = 10
 
 #: Human display label in standings.
 SH_HUMAN_LABEL = ">> YOU <<"
@@ -359,6 +360,42 @@ def _finalize_sh_match(state: SHArenaState) -> None:
         state.player_pending_signal = None
         state.opp_pending_announced = None
         state.bots[state.current_opponent_idx].reset()
+
+
+# ---------------------------------------------------------------------------
+# Fast-forward — resolve remaining rounds of the current match instantly
+# ---------------------------------------------------------------------------
+
+
+def fast_forward_sh_match(state: SHArenaState) -> None:
+    """Play out the remaining rounds of the current SH match instantly.
+
+    For auto-played rounds the player's last committed move is repeated as both
+    the signal and the commit.  If no move has been made yet, defaults to
+    COOPERATE (hunt Stag).
+
+    Mutates state in place.  After this call the caller should check
+    state.run_complete or state.rounds_this_match to decide what to show next.
+    """
+    if state.run_complete:
+        return
+
+    # Reset any half-submitted signal phase so we start from a clean state.
+    state.signal_submitted = False
+    state.player_pending_signal = None
+    state.opp_pending_announced = None
+
+    default_move = (
+        state.last_player_actual
+        if state.last_player_actual is not None
+        else COOPERATE
+    )
+
+    while state.rounds_this_match < SH_MATCH_LENGTH and not state.run_complete:
+        # Phase 1: signal (non-binding; use default)
+        submit_signal(state, default_move)
+        # Phase 2: commit (actual move)
+        commit_move(state, default_move)
 
 
 # ---------------------------------------------------------------------------

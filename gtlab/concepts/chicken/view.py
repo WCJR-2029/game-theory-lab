@@ -4,20 +4,21 @@ Chicken / Hawk-Dove concept view — Refined Dark Lab edition.
 Called by the Lab shell when the player selects "Chicken" from the menu.
 Adopts the shared Refined Dark Lab design system (ADR-012): inject_theme(),
 app_header, section_title, result_banner, stat_pills_row, leaderboard_chart,
-game_briefing, briefing_expander, arena_reveal.
+game_briefing, briefing_expander, arena_reveal, render_move_buttons_equal,
+intro_above_fold.
 
 Round flow (per-rerun):
   Phase 1 — COMMIT: player decides to throw away the wheel (lock to Straight)
              or keep it. Bot's commit decision is revealed.
   Phase 2 — CHOOSE: if player did NOT commit, they see opponent's commitment
-             status and choose Swerve or Straight. If player DID commit,
-             the move is forced to Straight and resolves automatically.
+             status and choose Swerve or Straight (equal buttons). If player
+             DID commit, the move is forced to Straight and resolves
+             automatically.
 """
 
 from __future__ import annotations
 
 import streamlit as st
-import pandas as pd
 
 from gtlab.engine import COOPERATE, DEFECT
 
@@ -30,6 +31,7 @@ from gtlab.concepts.chicken.chk_loop import (
     decide_commit,
     play_round,
     compute_chk_standings,
+    fast_forward_chk_match,
 )
 from gtlab.concepts.chicken.strategies import (
     CHK_STRATEGY_CLASSES,
@@ -64,6 +66,8 @@ from gtlab.ui.theme import (
     game_briefing,
     briefing_expander,
     arena_reveal,
+    render_move_buttons_equal,
+    intro_above_fold,
 )
 from gtlab.ui.utils import ordinal
 
@@ -133,17 +137,14 @@ def _render_chk_on_demand_nudge(event_key: str | None, progress: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Standings renderer — Altair leaderboard with YOU highlighted
+# Standings renderers — E1 + E4
 # ---------------------------------------------------------------------------
 
 
-def _render_chk_standings(arena: CHKArenaState) -> None:
+def _build_chk_chart_rows(arena: CHKArenaState) -> list[dict]:
+    """Build chart-ready rows from Chicken standings (mystery-masked if needed)."""
     rows = compute_chk_standings(arena)
-    if not rows:
-        st.write("No standings yet.")
-        return
 
-    # Build mystery mask: bot name -> display label
     mystery_mask: dict[str, str] = {}
     if arena.mystery_mode:
         letter = ord("A")
@@ -152,52 +153,53 @@ def _render_chk_standings(arena: CHKArenaState) -> None:
                 mystery_mask[bot.name] = f"Opponent {chr(letter)}"
             letter += 1
 
-    # Show framer when human hasn't played yet
-    human_unplayed = any(r.get("unplayed") for r in rows)
-    if human_unplayed:
-        st.caption(
-            "These are the bots' scores from playing each other. "
-            "Your bar fills in as you complete matches."
-        )
-
-    # Build display rows (ALL cells as strings → uniform column dtype so the
-    # Streamlit dataframe serializes cleanly; mixing ints with "—" breaks Arrow)
-    # and chart rows (numeric scores) from the same source data.
-    display_rows = []
     chart_rows = []
-    for i, row in enumerate(rows, start=1):
+    for row in rows:
         is_unplayed = row.get("unplayed", False)
-        if row["is_human"]:
-            label = CHK_HUMAN_LABEL
-        else:
-            label = mystery_mask.get(row["name"], row["name"])
-        display_rows.append({
-            "Rank": "—" if is_unplayed else str(i),
-            "Player": label,
-            "Score": "—" if is_unplayed else str(row["total_score"]),
-            "Avg/Round": "—" if is_unplayed else (
-                f"{row['mean_score']:.2f}" if row["total_rounds"] > 0 else "-"
-            ),
-        })
-        # Chart uses real numbers; unplayed → 0 (no visible bar)
+        label = CHK_HUMAN_LABEL if row["is_human"] else mystery_mask.get(row["name"], row["name"])
         chart_rows.append({
             "name": label,
             "score": 0 if is_unplayed else row["total_score"],
         })
+    return chart_rows
 
-    # Altair chart — YOU bar in amber
+
+def _render_debrief_standings(arena: CHKArenaState) -> None:
+    """Full leaderboard — chart only, no redundant table (E4).
+
+    Shown only on the debrief screen (E1).
+    """
+    rows = compute_chk_standings(arena)
+    if not rows:
+        st.write("No standings yet.")
+        return
+
+    chart_rows = _build_chk_chart_rows(arena)
+
+    human_unplayed = any(r.get("unplayed") for r in rows)
+    if human_unplayed:
+        st.caption("Bots played each other in the background while you played.")
+
     leaderboard_chart(chart_rows, highlight_name=CHK_HUMAN_LABEL)
 
-    # Styled dataframe — YOU row highlighted
-    df = pd.DataFrame(display_rows)
 
-    def highlight_human(row):
-        if row["Player"] == CHK_HUMAN_LABEL:
-            return ["background-color: #1E2C1A; font-weight: bold; color: #E6A23C"] * len(row)
-        return [""] * len(row)
+def _render_active_score_line(arena: CHKArenaState) -> None:
+    """One-line compact score shown during active play (E1).
 
-    styled = df.style.apply(highlight_human, axis=1)
-    st.dataframe(styled, width="stretch", hide_index=True)
+    Shows running total and current-match score so the player can track
+    progress without the full leaderboard competing for attention.
+    """
+    opp_idx = arena.current_opponent_idx
+    if opp_idx < len(arena.bots):
+        display_name = arena.opponent_display_names[opp_idx]
+    else:
+        display_name = "opponent"
+
+    stat_pills_row([
+        ("Total", arena.player_total_score),
+        ("This match vs. " + display_name, f"{arena.player_match_score} — {arena.opp_match_score}"),
+        ("Round", f"{arena.rounds_this_match + 1} / {CHK_MATCH_LENGTH}"),
+    ])
 
 
 # ---------------------------------------------------------------------------
@@ -290,12 +292,16 @@ def _render_chk_sidebar() -> tuple[list[str], float, bool, int]:
 
 
 # ---------------------------------------------------------------------------
-# Commit phase UI — throw away the wheel or keep it
+# Commit phase UI — throw away the wheel or keep it (E2: stays visually distinct)
 # ---------------------------------------------------------------------------
 
 
 def _render_commit_phase(arena: CHKArenaState, display_name: str) -> None:
-    """Render the commit decision buttons (Phase 1 of the round)."""
+    """Render the commit decision buttons (Phase 1 of the round).
+
+    The throw-away-the-wheel action is a deliberate special move and stays
+    visually distinct from the Swerve/Straight equal pair.
+    """
     section_title("Step 1 — Commit?")
     st.caption(
         "Throw away the wheel to lock to Straight — irrevocably and visibly. "
@@ -323,12 +329,16 @@ def _render_commit_phase(arena: CHKArenaState, display_name: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Choose phase UI — Swerve or Straight after seeing opponent's commitment
+# Choose phase UI — Swerve or Straight after seeing opponent's commitment (E2)
 # ---------------------------------------------------------------------------
 
 
 def _render_choose_phase(arena: CHKArenaState, display_name: str) -> dict | None:
-    """Render the move-choice buttons (Phase 2, only if player didn't commit)."""
+    """Render the move-choice buttons (Phase 2, only if player didn't commit).
+
+    Swerve and Straight are rendered via render_move_buttons_equal so they
+    have equal visual weight — no implied best choice (E2).
+    """
     if arena.opp_committed_this_round:
         result_banner(
             "lose",
@@ -344,23 +354,18 @@ def _render_choose_phase(arena: CHKArenaState, display_name: str) -> dict | None
 
     section_title("Step 2 — Choose your move")
 
-    col1, col2 = st.columns(2)
+    # E2: equal move buttons for Swerve/Straight
+    clicked = render_move_buttons_equal(
+        labels=["Swerve", "Straight"],
+        keys=["chk_btn_swerve", "chk_btn_straight"],
+        disabled=False,
+    )
+
     result = None
-    with col1:
-        if st.button(
-            "Swerve",
-            key="chk_btn_swerve",
-            width="stretch",
-            type="primary",
-        ):
-            result = play_round(arena, COOPERATE)
-    with col2:
-        if st.button(
-            "Straight",
-            key="chk_btn_straight",
-            width="stretch",
-        ):
-            result = play_round(arena, DEFECT)
+    if clicked == "Swerve":
+        result = play_round(arena, COOPERATE)
+    elif clicked == "Straight":
+        result = play_round(arena, DEFECT)
 
     return result
 
@@ -407,7 +412,7 @@ def _render_last_round_result(arena: CHKArenaState, display_name: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Current match panel
+# Current match panel — E1 + E2 + E3
 # ---------------------------------------------------------------------------
 
 
@@ -422,21 +427,15 @@ def _render_current_match_panel(arena: CHKArenaState, progress: dict) -> None:
     match_num = opp_idx + 1
     total_opponents = len(arena.bots)
 
-    section_title(f"Match {match_num} of {total_opponents}")
-    st.markdown(
-        f"<div style='font-size:1.1rem;font-weight:600;color:#E2E6EA;margin-bottom:0.4rem;'>"
-        f"vs. {display_name}</div>",
-        unsafe_allow_html=True,
-    )
+    # --- E1: compact one-line score above the move buttons ---
+    _render_active_score_line(arena)
+
+    st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+
+    section_title(f"Match {match_num} of {total_opponents} — vs. {display_name}")
 
     rounds_done = arena.rounds_this_match
     rounds_left = CHK_MATCH_LENGTH - rounds_done
-
-    stat_pills_row([
-        ("Round", f"{rounds_done + 1} / {CHK_MATCH_LENGTH}"),
-        ("Left", rounds_left),
-        ("Match score", f"You {arena.player_match_score} — {display_name} {arena.opp_match_score}"),
-    ])
 
     if rounds_done > 0:
         _render_last_round_result(arena, display_name)
@@ -461,7 +460,7 @@ def _render_current_match_panel(arena: CHKArenaState, progress: dict) -> None:
 
         st.rerun()
     else:
-        # Phase 2: player kept the wheel — show Swerve/Straight choice
+        # Phase 2: player kept the wheel — show equal Swerve/Straight choice (E2)
         result = _render_choose_phase(arena, display_name)
 
         if result is not None:
@@ -474,6 +473,27 @@ def _render_current_match_panel(arena: CHKArenaState, progress: dict) -> None:
 
             st.rerun()
 
+    # --- E3: fast-forward control (keep the wheel, repeat last move) ---
+    # Only show during Phase 1 (commit not yet decided) and when rounds remain.
+    # The button is outside the commit/choose branching so it persists.
+    if not arena.commit_decided and rounds_left > 1:
+        st.markdown("<div style='height:0.4rem'></div>", unsafe_allow_html=True)
+        col_ff, _ = st.columns([1, 3])
+        with col_ff:
+            if st.button(
+                "Play out this match",
+                key="chk_btn_fast_forward",
+                help=(
+                    f"Auto-resolve the remaining {rounds_left} rounds "
+                    "(keeps the wheel, repeats your last move), then move to the next opponent."
+                ),
+            ):
+                fast_forward_chk_match(arena)
+                prog = increment_experience(progress, CHK_CONCEPT_KEY, 1)
+                save_progress(prog)
+                st.session_state.progress = prog
+                st.rerun()
+
     _render_chk_on_demand_nudge(arena.last_nudge_event, progress)
 
 
@@ -483,11 +503,7 @@ def _render_current_match_panel(arena: CHKArenaState, progress: dict) -> None:
 
 
 def _make_chk_reveal_body(rows: list[dict], arena: CHKArenaState) -> str:
-    """Generate reveal text from final Chicken standings.
-
-    Describes what actually happened (committers vs non-committers, crashes,
-    who fared well) without pre-spoiling the lesson.
-    """
+    """Generate reveal text from final Chicken standings."""
     if not rows:
         return ""
 
@@ -498,12 +514,6 @@ def _make_chk_reveal_body(rows: list[dict], arena: CHKArenaState) -> str:
     bot_rows = [r for r in rows if not r["is_human"]]
     top_half_names = {r["name"] for r in bot_rows[: max(1, len(bot_rows) // 2)]}
     bottom_half_names = {r["name"] for r in bot_rows[max(1, len(bot_rows) // 2):]}
-
-    # Count crashes in all matches (matches where both went Straight)
-    # We track this via score — crash payoff is arena.game.payoff(DEFECT, DEFECT)
-    crash_score = arena.game.payoff(DEFECT, DEFECT)
-    # Approximate crash frequency from score patterns isn't reliable from aggregate;
-    # instead describe the structural result from top/bottom positions.
 
     sentences = []
 
@@ -558,7 +568,7 @@ def _make_chk_reveal_body(rows: list[dict], arena: CHKArenaState) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Post-run debrief
+# Post-run debrief — E1 + E4
 # ---------------------------------------------------------------------------
 
 
@@ -602,6 +612,11 @@ def _render_chk_debrief(arena: CHKArenaState, progress: dict) -> None:
             "— but an uncommitted one might flip.)"
         )
 
+    # E4: chart-only leaderboard on debrief (no redundant table)
+    st.divider()
+    section_title("Final Standings")
+    _render_debrief_standings(arena)
+
     st.divider()
     if st.button("Play again", type="primary", key="chk_play_again"):
         st.session_state[_KEY_ARENA] = None
@@ -644,58 +659,51 @@ def render() -> None:
 
     arena: CHKArenaState | None = st.session_state[_KEY_ARENA]
 
-    # --- Setup / Start Run ---
+    # --- Setup / Start Run (E5: Start above the fold) ---
     if arena is None:
-        game_briefing(
-            story=STORY,
-            how_it_works=HOW_IT_WORKS,
-            what_to_watch=WHAT_TO_WATCH,
-            why_it_matters=WHY_IT_MATTERS,
-            your_job=YOUR_JOB,
-        )
-
-        st.divider()
-
-        nudge_state = get_nudge_state(progress, CHK_CONCEPT_KEY)
-        if nudge_state == NudgeState.NEW:
-            result_banner(
-                "neutral",
-                "Ready to step in?",
-                "Start by keeping the wheel every round and just picking Swerve or Straight. "
-                "Then try throwing the wheel once and watch what the opponent does.",
+        # E5: hook + Your Job + Start button all above the fold;
+        # full briefing tucked into a collapsed expander below.
+        def _briefing_content() -> None:
+            game_briefing(
+                story=STORY,
+                how_it_works=HOW_IT_WORKS,
+                what_to_watch=WHAT_TO_WATCH,
+                why_it_matters=WHY_IT_MATTERS,
             )
 
-        col_start, _ = st.columns([1, 2])
-        with col_start:
-            if st.button(
-                "Enter the arena",
-                type="primary",
-                width="stretch",
-                key="chk_start_run",
-            ):
-                arena = init_chk_arena(selected_names, noise, mystery_mode, crash=crash)
-                st.session_state[_KEY_ARENA] = arena
-                st.session_state[_KEY_SHOW_SETUP] = False
+        started = intro_above_fold(
+            hook=(
+                "One move locks you in — and once the wheel is gone, "
+                "your opponent has no choice but to respond."
+            ),
+            your_job=YOUR_JOB,
+            start_button_label="Enter the arena",
+            start_button_key="chk_start_run",
+            briefing_expander_label="Read the full briefing",
+            briefing_content_fn=_briefing_content,
+        )
 
-                nudge_state = get_nudge_state(progress, CHK_CONCEPT_KEY)
-                if nudge_state == NudgeState.NEW:
-                    arena.last_nudge_event = CHK_NUDGE_ROUND_START
+        if started:
+            arena = init_chk_arena(selected_names, noise, mystery_mode, crash=crash)
+            st.session_state[_KEY_ARENA] = arena
+            st.session_state[_KEY_SHOW_SETUP] = False
 
-                st.rerun()
+            nudge_state = get_nudge_state(progress, CHK_CONCEPT_KEY)
+            if nudge_state == NudgeState.NEW:
+                arena.last_nudge_event = CHK_NUDGE_ROUND_START
+
+            st.rerun()
         return
 
-    # --- Active run: complete ---
+    # --- Active run: complete (debrief) ---
+    # E1: full leaderboard only on debrief; E4: chart only, no table
     if arena.run_complete:
-        left_col, right_col = st.columns([1, 1])
-        with left_col:
-            section_title("Debrief")
-            _render_chk_debrief(arena, progress)
-        with right_col:
-            section_title("Final Standings")
-            _render_chk_standings(arena)
+        section_title("Debrief")
+        _render_chk_debrief(arena, progress)
         return
 
-    # --- Active run: live play ---
+    # --- Active run: live play (E1: single-column, decision dominates) ---
+    # Briefing expander — always one click away during a run
     briefing_expander(
         story=STORY,
         how_it_works=HOW_IT_WORKS,
@@ -704,26 +712,18 @@ def render() -> None:
         your_job=YOUR_JOB,
     )
 
-    left_col, right_col = st.columns([1, 1], gap="large")
+    # E1: no columns during live play — the current match panel takes the full width.
+    # Leaderboard is hidden; only the one-line score appears at top of the panel.
+    _render_current_match_panel(arena, progress)
 
-    with left_col:
-        _render_current_match_panel(arena, progress)
-
-    with right_col:
-        section_title("Live Standings")
-        st.caption(
-            "Bots play among themselves in the background; "
-            "your score updates as you complete each match."
-        )
-        _render_chk_standings(arena)
-
-        with st.expander("Who's in the arena?"):
-            for bot in arena.bots:
-                revealed = arena.opponent_display_names[arena.bots.index(bot)] != "???"
-                if revealed or not arena.mystery_mode:
-                    st.write(f"**{bot.name}:** {bot.description}")
-                else:
-                    st.write("**???:** Identity hidden until you've played them.")
+    # Who's in the arena — accessible, lower prominence
+    with st.expander("Who's in the arena?"):
+        for bot in arena.bots:
+            revealed = arena.opponent_display_names[arena.bots.index(bot)] != "???"
+            if revealed or not arena.mystery_mode:
+                st.write(f"**{bot.name}:** {bot.description}")
+            else:
+                st.write("**???:** Identity hidden until you've played them.")
 
     st.divider()
     col_reset, _ = st.columns([1, 4])

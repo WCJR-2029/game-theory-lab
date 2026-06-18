@@ -19,7 +19,6 @@ Round flow (per-rerun):
 from __future__ import annotations
 
 import streamlit as st
-import pandas as pd
 
 from gtlab.engine import COOPERATE, DEFECT
 
@@ -32,6 +31,7 @@ from gtlab.concepts.stag_hunt.sh_loop import (
     submit_signal,
     commit_move,
     compute_sh_standings,
+    fast_forward_sh_match,
 )
 from gtlab.concepts.stag_hunt.strategies import (
     SH_STRATEGY_CLASSES,
@@ -59,6 +59,8 @@ from gtlab.ui.theme import (
     game_briefing,
     briefing_expander,
     arena_reveal,
+    render_move_buttons_equal,
+    intro_above_fold,
 )
 from gtlab.ui.utils import ordinal
 from gtlab.concepts.stag_hunt.briefing import (
@@ -141,16 +143,13 @@ def _render_sh_on_demand_nudge(event_key: str | None, progress: dict) -> None:
 
 # ---------------------------------------------------------------------------
 # Standings renderer — Altair leaderboard with YOU highlighted
+# Debrief: chart only (E4).  Active-play leaderboard is hidden (E1).
 # ---------------------------------------------------------------------------
 
 
-def _render_sh_standings(arena: SHArenaState) -> None:
+def _build_sh_chart_rows(arena: SHArenaState) -> list[dict]:
+    """Build chart-ready rows from standings (mystery-masked as needed)."""
     rows = compute_sh_standings(arena)
-    if not rows:
-        st.write("No standings yet.")
-        return
-
-    # Mystery mask
     mystery_mask: dict[str, str] = {}
     if arena.mystery_mode:
         letter = ord('A')
@@ -158,48 +157,60 @@ def _render_sh_standings(arena: SHArenaState) -> None:
             if arena.opponent_display_names[idx] == "???":
                 mystery_mask[bot.name] = f"Opponent {chr(letter)}"
             letter += 1
-
-    # Framer caption when human hasn't played
-    human_unplayed = any(r.get("unplayed") for r in rows)
-    if human_unplayed:
-        st.caption(
-            "These are the bots' scores from playing each other. "
-            "Your bar fills in as you complete matches."
-        )
-
-    # Build display + chart rows — ALL cells as strings
-    display_rows = []
     chart_rows = []
-    for i, row in enumerate(rows, start=1):
+    for row in rows:
         is_unplayed = row.get("unplayed", False)
         if row["is_human"]:
             label = SH_HUMAN_LABEL
         else:
             label = mystery_mask.get(row["name"], row["name"])
-        display_rows.append({
-            "Rank": "—" if is_unplayed else str(i),
-            "Player": label,
-            "Score": "—" if is_unplayed else str(row["total_score"]),
-            "Avg/Round": "—" if is_unplayed else (
-                f"{row['mean_score']:.2f}" if row["total_rounds"] > 0 else "-"
-            ),
-        })
         chart_rows.append({
             "name": label,
             "score": 0 if is_unplayed else row["total_score"],
         })
+    return chart_rows
 
+
+def _render_sh_debrief_standings(arena: SHArenaState) -> None:
+    """Full leaderboard — chart only, no redundant table (E4).
+
+    Shown only on the debrief screen (E1).
+    """
+    rows = compute_sh_standings(arena)
+    if not rows:
+        st.write("No standings yet.")
+        return
+
+    human_unplayed = any(r.get("unplayed") for r in rows)
+    if human_unplayed:
+        st.caption("Bots played each other in the background while you played.")
+
+    chart_rows = _build_sh_chart_rows(arena)
     leaderboard_chart(chart_rows, highlight_name=SH_HUMAN_LABEL)
 
-    df = pd.DataFrame(display_rows)
 
-    def highlight_human(row):
-        if row["Player"] == SH_HUMAN_LABEL:
-            return ["background-color: #1E2C1A; font-weight: bold; color: #E6A23C"] * len(row)
-        return [""] * len(row)
+# ---------------------------------------------------------------------------
+# Active score line — compact one-line score shown during play (E1)
+# ---------------------------------------------------------------------------
 
-    styled = df.style.apply(highlight_human, axis=1)
-    st.dataframe(styled, width="stretch", hide_index=True)
+
+def _render_sh_active_score_line(arena: SHArenaState) -> None:
+    """One-line compact score shown during active play (E1).
+
+    Shows running total and current-match score so the player can track
+    progress without the full leaderboard competing for attention.
+    """
+    opp_idx = arena.current_opponent_idx
+    if opp_idx < len(arena.bots):
+        display_name = arena.opponent_display_names[opp_idx]
+    else:
+        display_name = "opponent"
+
+    stat_pills_row([
+        ("Total", arena.player_total_score),
+        ("This match vs. " + display_name, f"{arena.player_match_score} — {arena.opp_match_score}"),
+        ("Round", f"{arena.rounds_this_match + 1} / {SH_MATCH_LENGTH}"),
+    ])
 
 
 # ---------------------------------------------------------------------------
@@ -275,7 +286,10 @@ def _render_sh_sidebar() -> tuple[list[str], float, bool]:
 
 
 def _render_signal_phase(arena: SHArenaState, display_name: str) -> None:
-    """Render the announcement buttons (Phase A of the round)."""
+    """Render the announcement buttons (Phase A of the round).
+
+    Both buttons carry equal weight — neither should imply a recommended option.
+    """
     st.write("**Step 1 — Announce your intention:**")
     st.caption(
         "This is non-binding. You can announce Stag and then hunt Hare. "
@@ -288,9 +302,8 @@ def _render_signal_phase(arena: SHArenaState, display_name: str) -> None:
             "Announce: Stag",
             key="sh_btn_announce_stag",
             width="stretch",
-            type="primary",
         ):
-            result = submit_signal(arena, COOPERATE)
+            submit_signal(arena, COOPERATE)
             st.session_state[_KEY_LAST_NUDGE] = None
             st.rerun()
     with col2:
@@ -299,7 +312,7 @@ def _render_signal_phase(arena: SHArenaState, display_name: str) -> None:
             key="sh_btn_announce_hare",
             width="stretch",
         ):
-            result = submit_signal(arena, DEFECT)
+            submit_signal(arena, DEFECT)
             st.session_state[_KEY_LAST_NUDGE] = None
             st.rerun()
 
@@ -310,7 +323,11 @@ def _render_signal_phase(arena: SHArenaState, display_name: str) -> None:
 
 
 def _render_commit_phase(arena: SHArenaState, display_name: str) -> dict | None:
-    """Render the commit buttons (Phase B of the round). Returns commit result or None."""
+    """Render the commit buttons (Phase B of the round). Returns commit result or None.
+
+    Uses render_move_buttons_equal so Hunt Stag / Hunt Hare carry equal visual
+    weight — neither implies a recommended choice (E2).
+    """
     player_announced = arena.player_pending_signal
     opp_announced = arena.opp_pending_announced
 
@@ -330,25 +347,17 @@ def _render_commit_phase(arena: SHArenaState, display_name: str) -> dict | None:
     st.write("**Step 2 — Now actually hunt:**")
     st.caption("You've seen their announcement. What do you actually do?")
 
-    col1, col2 = st.columns(2)
-    result = None
-    with col1:
-        if st.button(
-            "Hunt Stag",
-            key="sh_btn_commit_stag",
-            width="stretch",
-            type="primary",
-        ):
-            result = commit_move(arena, COOPERATE)
-    with col2:
-        if st.button(
-            "Hunt Hare",
-            key="sh_btn_commit_hare",
-            width="stretch",
-        ):
-            result = commit_move(arena, DEFECT)
-
-    return result
+    # E2: equal prominent commit buttons — no implied best choice
+    clicked = render_move_buttons_equal(
+        labels=["Hunt Stag", "Hunt Hare"],
+        keys=["sh_btn_commit_stag", "sh_btn_commit_hare"],
+        disabled=False,
+    )
+    if clicked == "Hunt Stag":
+        return commit_move(arena, COOPERATE)
+    if clicked == "Hunt Hare":
+        return commit_move(arena, DEFECT)
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -405,21 +414,15 @@ def _render_current_match_panel(arena: SHArenaState, progress: dict) -> None:
     match_num = opp_idx + 1
     total_opponents = len(arena.bots)
 
-    section_title(f"Match {match_num} of {total_opponents}")
-    st.markdown(
-        f"<div style='font-size:1.1rem;font-weight:600;color:#E2E6EA;margin-bottom:0.4rem;'>"
-        f"vs. {display_name}</div>",
-        unsafe_allow_html=True,
-    )
+    # --- E1: compact one-line score above the match header ---
+    _render_sh_active_score_line(arena)
+
+    st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+
+    section_title(f"Match {match_num} of {total_opponents} — vs. {display_name}")
 
     rounds_done = arena.rounds_this_match
     rounds_left = SH_MATCH_LENGTH - rounds_done
-
-    stat_pills_row([
-        ("Round", f"{rounds_done + 1}/{SH_MATCH_LENGTH}"),
-        ("Left", rounds_left),
-        ("Match score", f"You {arena.player_match_score} — {display_name} {arena.opp_match_score}"),
-    ])
 
     # Show last-round result if we have one
     if rounds_done > 0:
@@ -435,7 +438,7 @@ def _render_current_match_panel(arena: SHArenaState, progress: dict) -> None:
         # Phase A: player hasn't announced yet
         _render_signal_phase(arena, display_name)
     else:
-        # Phase B: player announced; now commit
+        # Phase B: player announced; now commit (E2: equal buttons)
         result = _render_commit_phase(arena, display_name)
 
         if result is not None:
@@ -447,6 +450,22 @@ def _render_current_match_panel(arena: SHArenaState, progress: dict) -> None:
                 st.session_state.progress = prog
 
             st.rerun()
+
+    # --- E3: fast-forward control (only when signal phase, not mid-round) ---
+    if not arena.signal_submitted and rounds_left > 1:
+        st.markdown("<div style='height:0.4rem'></div>", unsafe_allow_html=True)
+        col_ff, _ = st.columns([1, 3])
+        with col_ff:
+            if st.button(
+                "Play out this match",
+                key="sh_btn_fast_forward",
+                help=f"Auto-resolve the remaining {rounds_left} rounds, then move to the next opponent.",
+            ):
+                fast_forward_sh_match(arena)
+                prog = increment_experience(progress, SH_CONCEPT_KEY, 1)
+                save_progress(prog)
+                st.session_state.progress = prog
+                st.rerun()
 
     _render_sh_on_demand_nudge(arena.last_nudge_event, progress)
 
@@ -575,6 +594,11 @@ def _render_sh_debrief(arena: SHArenaState, progress: dict) -> None:
             "What happens when you add Mystery mode and try to read the announcements?)"
         )
 
+    # E4: chart-only leaderboard on debrief (no redundant table)
+    st.divider()
+    section_title("Final Standings")
+    _render_sh_debrief_standings(arena)
+
     st.divider()
     if st.button("Play again", type="primary", key="sh_play_again"):
         st.session_state[_KEY_ARENA] = None
@@ -614,58 +638,51 @@ def render() -> None:
 
     arena: SHArenaState | None = st.session_state[_KEY_ARENA]
 
-    # --- Setup / Start Run ---
+    # --- Setup / Start Run (E5: Start above the fold) ---
     if arena is None:
-        game_briefing(
-            story=STORY,
-            how_it_works=HOW_IT_WORKS,
-            what_to_watch=WHAT_TO_WATCH,
-            why_it_matters=WHY_IT_MATTERS,
-            your_job=YOUR_JOB,
-        )
-
-        st.divider()
-
-        nudge_state = get_nudge_state(progress, SH_CONCEPT_KEY)
-        if nudge_state == NudgeState.NEW:
-            result_banner(
-                "neutral",
-                "Ready to step in?",
-                "Press Start and try trusting the announcements for a while. "
-                "Then try ignoring them. Notice what changes.",
+        # E5: hook + Your Job + Start button all above the fold;
+        # full briefing tucked into a collapsed expander below.
+        def _briefing_content() -> None:
+            game_briefing(
+                story=STORY,
+                how_it_works=HOW_IT_WORKS,
+                what_to_watch=WHAT_TO_WATCH,
+                why_it_matters=WHY_IT_MATTERS,
             )
 
-        col_start, _ = st.columns([1, 2])
-        with col_start:
-            if st.button(
-                "Start hunt",
-                type="primary",
-                width="stretch",
-                key="sh_start_run",
-            ):
-                arena = init_sh_arena(selected_names, noise, mystery_mode)
-                st.session_state[_KEY_ARENA] = arena
-                st.session_state[_KEY_SHOW_SETUP] = False
+        started = intro_above_fold(
+            hook=(
+                "Two hunters must each decide independently — hunt together for the bigger prize, "
+                "or go it alone for the guaranteed catch."
+            ),
+            your_job=YOUR_JOB,
+            start_button_label="Start hunt",
+            start_button_key="sh_start_run",
+            briefing_expander_label="Read the full briefing",
+            briefing_content_fn=_briefing_content,
+        )
 
-                nudge_state = get_nudge_state(progress, SH_CONCEPT_KEY)
-                if nudge_state == NudgeState.NEW:
-                    arena.last_nudge_event = SH_NUDGE_ROUND_START
+        if started:
+            arena = init_sh_arena(selected_names, noise, mystery_mode)
+            st.session_state[_KEY_ARENA] = arena
+            st.session_state[_KEY_SHOW_SETUP] = False
 
-                st.rerun()
+            nudge_state = get_nudge_state(progress, SH_CONCEPT_KEY)
+            if nudge_state == NudgeState.NEW:
+                arena.last_nudge_event = SH_NUDGE_ROUND_START
+
+            st.rerun()
         return
 
-    # --- Active run: complete ---
+    # --- Active run: complete (debrief) ---
+    # E1: full leaderboard only on debrief; E4: chart only, no table
     if arena.run_complete:
-        left_col, right_col = st.columns([1, 1])
-        with left_col:
-            section_title("Debrief")
-            _render_sh_debrief(arena, progress)
-        with right_col:
-            section_title("Final Standings")
-            _render_sh_standings(arena)
+        section_title("Debrief")
+        _render_sh_debrief(arena, progress)
         return
 
-    # --- Active run: live play ---
+    # --- Active run: live play (E1: single-column, decision dominates) ---
+    # Briefing expander — always one click away during a run
     briefing_expander(
         story=STORY,
         how_it_works=HOW_IT_WORKS,
@@ -674,26 +691,17 @@ def render() -> None:
         your_job=YOUR_JOB,
     )
 
-    left_col, right_col = st.columns([1, 1], gap="large")
+    # E1: no columns during live play — the current match panel takes the full width
+    _render_current_match_panel(arena, progress)
 
-    with left_col:
-        _render_current_match_panel(arena, progress)
-
-    with right_col:
-        section_title("Live Standings")
-        st.caption(
-            "Bots hunt among themselves in the background; "
-            "your score updates as you complete each match."
-        )
-        _render_sh_standings(arena)
-
-        with st.expander("Who's in the hunt?"):
-            for bot in arena.bots:
-                revealed = arena.opponent_display_names[arena.bots.index(bot)] != "???"
-                if revealed or not arena.mystery_mode:
-                    st.write(f"**{bot.name}:** {bot.description}")
-                else:
-                    st.write("**???:** Identity hidden until you've played them.")
+    # Who's in the hunt — still accessible, lower prominence
+    with st.expander("Who's in the hunt?"):
+        for bot in arena.bots:
+            revealed = arena.opponent_display_names[arena.bots.index(bot)] != "???"
+            if revealed or not arena.mystery_mode:
+                st.write(f"**{bot.name}:** {bot.description}")
+            else:
+                st.write("**???:** Identity hidden until you've played them.")
 
     st.divider()
     col_reset, _ = st.columns([1, 4])

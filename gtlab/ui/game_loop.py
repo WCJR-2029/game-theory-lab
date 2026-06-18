@@ -33,8 +33,9 @@ from gtlab.engine import (
 # Constants
 # ---------------------------------------------------------------------------
 
-#: Fixed match length (not a player knob in Phase 1 per ADR-003).
-MATCH_LENGTH = 20
+#: Fixed match length — 10 rounds keeps a match short enough to reveal the
+#: cross-match pattern quickly while still showing per-round dynamics.
+MATCH_LENGTH = 10
 
 #: Human player display label in standings.
 HUMAN_LABEL = ">> YOU <<"
@@ -386,6 +387,31 @@ def _finalize_match(state: ArenaState) -> None:
         state.last_opp_actual = None
         # Reset the next opponent's strategy state
         state.bots[state.current_opponent_idx].reset()
+
+
+# ---------------------------------------------------------------------------
+# Fast-forward — resolve remaining rounds of the current match instantly
+# ---------------------------------------------------------------------------
+
+
+def fast_forward_match(state: ArenaState) -> None:
+    """Play out the remaining rounds of the current match instantly.
+
+    The player's last actual move is repeated for the auto-played rounds.
+    If no move has been made yet (first round), defaults to COOPERATE.
+    Mutates state in place; does NOT advance to the next opponent — the
+    normal _finalize_match path handles that (called from step_round).
+
+    After this call the caller should check state.run_complete or
+    state.current_opponent_idx to decide what to show next.
+    """
+    if state.run_complete:
+        return
+
+    default_move = state.last_player_actual if state.last_player_actual is not None else COOPERATE
+
+    while state.rounds_this_match < MATCH_LENGTH and not state.run_complete:
+        step_round(state, default_move)
 
 
 # ---------------------------------------------------------------------------

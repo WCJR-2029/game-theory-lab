@@ -33,7 +33,7 @@ HOW_IT_WORKS = (
     "if they defect while you cooperate, the reverse happens; "
     "and if you both defect, you each scrape a little — better than being the lone "
     "cooperator who gets nothing, but far worse than if you'd both stayed silent. "
-    "You play each bot once, 20 rounds per bot. "
+    "You play each bot once, 10 rounds per bot. "
     "The bots also play a full round-robin against each other in the background, "
     "so the standings show how every strategy stacks up — yours included."
 )
@@ -63,5 +63,5 @@ WHY_IT_MATTERS = (
 
 YOUR_JOB = (
     "Each round, click Cooperate or Defect. "
-    "You'll do this 20 times against each of 6 bot personalities."
+    "You'll do this 10 times against each bot personality."
 )

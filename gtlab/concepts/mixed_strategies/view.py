@@ -44,6 +44,8 @@ from gtlab.ui.theme import (
     briefing_expander,
     game_briefing,
     inject_theme,
+    intro_above_fold,
+    render_move_buttons_equal,
     result_banner,
     section_title,
     stat_pills_row,
@@ -190,7 +192,7 @@ def _render_setup_screen(
     mystery_mode: bool,
     progress: dict,
 ) -> None:
-    """Render the game setup / entry screen."""
+    """Render the game setup / entry screen (E5: Start above the fold)."""
     app_header(
         title="Matching Pennies & RPS",
         subtitle=(
@@ -199,77 +201,39 @@ def _render_setup_screen(
         ),
     )
 
-    # Onboarding briefing — full four-section panel
-    game_briefing(
-        story=STORY,
-        how_it_works=HOW_IT_WORKS,
-        what_to_watch=WHAT_TO_WATCH,
-        why_it_matters=WHY_IT_MATTERS,
-        your_job=YOUR_JOB,
-    )
-
-    nudge_state = get_nudge_state(progress, MS_CONCEPT_KEY)
-    if nudge_state == NudgeState.NEW:
-        result_banner(
-            "neutral",
-            "Ready to step in?",
-            "Press Start and pick your moves. "
-            "Watch the readout on the right — it shows how readable you are "
-            "round by round.",
+    # E5: hook + Your Job + Start button above the fold;
+    # full four-section briefing tucked into a collapsed expander below.
+    def _briefing_content() -> None:
+        game_briefing(
+            story=STORY,
+            how_it_works=HOW_IT_WORKS,
+            what_to_watch=WHAT_TO_WATCH,
+            why_it_matters=WHY_IT_MATTERS,
         )
 
-    st.divider()
-    section_title("Current setup")
-
-    # Lab-card summary of the current selections
-    from gtlab.concepts.mixed_strategies.opponents import OPPONENT_BY_NAME
-    if opponent_name != _ROTATING_NAME:
-        if opponent_name == "Pattern Reader":
-            opp_desc = "Watches the rhythm of your last few moves and steps right in front of your next one."
-        elif opponent_name in OPPONENT_BY_NAME:
-            opp_desc = OPPONENT_BY_NAME[opponent_name].description
-        else:
-            opp_desc = ""
-    else:
-        opp_desc = "Cycles through all opponents in order, round by round."
-
-    st.markdown(
-        f"""
-<div class="lab-card" style="max-width:40rem;">
-  <div style="font-size:0.75rem;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;
-              color:#8B9299;margin-bottom:0.5rem;">Selected</div>
-  <div style="display:flex;gap:2rem;flex-wrap:wrap;">
-    <div>
-      <div style="font-size:0.72rem;color:#8B9299;margin-bottom:0.1rem;">Game</div>
-      <div style="font-size:1rem;font-weight:600;color:#E2E6EA;">{game_name}</div>
-    </div>
-    <div>
-      <div style="font-size:0.72rem;color:#8B9299;margin-bottom:0.1rem;">Opponent</div>
-      <div style="font-size:1rem;font-weight:600;color:#E6A23C;">{opponent_name}</div>
-    </div>
-  </div>
-  <div style="font-size:0.85rem;color:#8B9299;margin-top:0.5rem;line-height:1.5;">
-    {opp_desc}
-  </div>
-</div>
-""",
-        unsafe_allow_html=True,
+    started = intro_above_fold(
+        hook=(
+            "Any pattern you fall into can be read — and punished. "
+            "The only safe move is genuine unpredictability."
+        ),
+        your_job=YOUR_JOB,
+        start_button_label="Start",
+        start_button_key="mp_start_btn",
+        briefing_expander_label="Read the full briefing",
+        briefing_content_fn=_briefing_content,
     )
-    st.caption("Use the sidebar to change game or opponent.")
 
-    col_start, _ = st.columns([1, 2])
-    with col_start:
-        if st.button("Start", key="mp_start_btn", type="primary", width="stretch"):
-            arena = init_ms_arena(
-                game_name=game_name,
-                opponent_name=opponent_name,
-                memory_depth=memory_depth,
-                mystery_mode=mystery_mode,
-            )
-            st.session_state[_KEY_ARENA] = arena
-            st.session_state[_KEY_SHOW_SETUP] = False
-            st.session_state[_KEY_AWAITING_REVEAL] = False
-            st.rerun()
+    if started:
+        arena = init_ms_arena(
+            game_name=game_name,
+            opponent_name=opponent_name,
+            memory_depth=memory_depth,
+            mystery_mode=mystery_mode,
+        )
+        st.session_state[_KEY_ARENA] = arena
+        st.session_state[_KEY_SHOW_SETUP] = False
+        st.session_state[_KEY_AWAITING_REVEAL] = False
+        st.rerun()
 
 
 # ---------------------------------------------------------------------------
@@ -278,7 +242,13 @@ def _render_setup_screen(
 
 
 def _render_predictability_readout(arena: MSArenaState) -> None:
-    """Render the live predictability readout panel."""
+    """Render the live predictability readout panel (E4: one signal, led by accuracy banner).
+
+    Layout:
+      1. Headline accuracy signal — the single number the player cares about.
+      2. Move distribution — ONCE only (progress bars; stat_pills duplicate removed).
+      3. Streak info.
+    """
     section_title("How readable are you?")
 
     if arena.metrics.total_rounds == 0:
@@ -290,42 +260,14 @@ def _render_predictability_readout(arena: MSArenaState) -> None:
         )
         return
 
-    # Move distribution — styled lab-card
-    stat_pills_row([
-        (move, f"{int(arena.metrics.move_frequency(move) * 100)}%")
-        for move in arena.game.moves
-    ])
-
-    # Progress bars for each move
-    for move in arena.game.moves:
-        freq = arena.metrics.move_frequency(move)
-        st.progress(freq, text=f"{move}: {int(freq * 100)}%")
-
-    # Streak info in a card
-    streak = arena.metrics.current_streak
-    longest = arena.metrics.longest_streak
-    streak_note = ""
-    if streak >= 3:
-        streak_note = " — that's a pattern a reader can exploit."
-    elif streak >= 2:
-        streak_note = " — getting repetitive."
-
-    stat_pills_row([
-        ("Current streak", streak),
-        ("Longest streak", longest),
-    ])
-    if streak_note:
-        st.caption(f"Three in a row{streak_note}")
-
-    # Opponent prediction accuracy
-    section_title("Prediction accuracy")
+    # E4: LEAD with the single headline accuracy signal
     if isinstance(arena.opponent, PerfectRandomizer) and not arena.rotating:
-        st.caption("Pure random opponent — no predictions made.")
+        result_banner("neutral", "Perfect Randomizer — no predictions made")
     elif arena.metrics.total_rounds < 5:
-        st.caption("Gathering data... (5+ rounds needed)")
+        st.caption("Gathering data... (5+ rounds needed for accuracy signal)")
     else:
         if arena.rotating:
-            st.caption("Multiple opponents - see individual rates below.")
+            st.caption("Multiple opponents — accuracy varies by opponent.")
         else:
             hr = arena.metrics.hit_rate(arena.opponent.name)
             if hr is None:
@@ -346,6 +288,28 @@ def _render_predictability_readout(arena: MSArenaState) -> None:
                     f"{label} — predicted correctly {hit_pct}% of the time",
                 )
 
+    # E4: Move distribution ONCE — progress bars only (stat_pills duplicate removed)
+    section_title("Move distribution")
+    for move in arena.game.moves:
+        freq = arena.metrics.move_frequency(move)
+        st.progress(freq, text=f"{move}: {int(freq * 100)}%")
+
+    # Streak info
+    streak = arena.metrics.current_streak
+    longest = arena.metrics.longest_streak
+    streak_note = ""
+    if streak >= 3:
+        streak_note = " — that's a pattern a reader can exploit."
+    elif streak >= 2:
+        streak_note = " — getting repetitive."
+
+    stat_pills_row([
+        ("Current streak", streak),
+        ("Longest streak", longest),
+    ])
+    if streak_note:
+        st.caption(f"Three in a row{streak_note}")
+
 
 # ---------------------------------------------------------------------------
 # Move buttons
@@ -353,28 +317,24 @@ def _render_predictability_readout(arena: MSArenaState) -> None:
 
 
 def _render_move_buttons(arena: MSArenaState) -> str | None:
-    """Render styled move buttons for the current game. Returns move name or None."""
+    """Render move buttons with equal visual weight — no implied best choice (E2).
+
+    Uses render_move_buttons_equal() for both Matching Pennies (2 buttons)
+    and Rock-Paper-Scissors (3 buttons) so all options look identical.
+    Returns the move name clicked, or None.
+    """
     section_title("Pick your move")
     if arena.game.name == "Matching Pennies":
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Heads", key="mp_btn_Heads", type="primary", width="stretch"):
-                return "Heads"
-        with col2:
-            if st.button("Tails", key="mp_btn_Tails", width="stretch"):
-                return "Tails"
+        clicked = render_move_buttons_equal(
+            labels=["Heads", "Tails"],
+            keys=["mp_btn_Heads", "mp_btn_Tails"],
+        )
     else:
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            if st.button("Rock", key="mp_btn_Rock", type="primary", width="stretch"):
-                return "Rock"
-        with col2:
-            if st.button("Paper", key="mp_btn_Paper", width="stretch"):
-                return "Paper"
-        with col3:
-            if st.button("Scissors", key="mp_btn_Scissors", width="stretch"):
-                return "Scissors"
-    return None
+        clicked = render_move_buttons_equal(
+            labels=["Rock", "Paper", "Scissors"],
+            keys=["mp_btn_Rock", "mp_btn_Paper", "mp_btn_Scissors"],
+        )
+    return clicked
 
 
 # ---------------------------------------------------------------------------

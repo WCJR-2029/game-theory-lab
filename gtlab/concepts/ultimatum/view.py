@@ -66,6 +66,8 @@ from gtlab.ui.theme import (
     game_briefing,
     briefing_expander,
     arena_reveal,
+    render_move_buttons_equal,
+    intro_above_fold,
 )
 
 # ---------------------------------------------------------------------------
@@ -391,26 +393,20 @@ def _render_responder_panel(arena: ULTArenaState, opp_display: str) -> None:
     with col_keep:
         st.metric("They keep", f"{offer.proposer_share:,}")
 
-    col_acc, col_rej = st.columns(2)
-    with col_acc:
-        if st.button(
-            "Accept",
-            key="ult_btn_accept",
-            type="primary",
-            width="stretch",
-        ):
-            play_responder_round(arena, player_accepts=True)
-            st.session_state[_KEY_AWAITING_NEXT] = True
-            st.rerun()
-    with col_rej:
-        if st.button(
-            "Reject",
-            key="ult_btn_reject",
-            width="stretch",
-        ):
-            play_responder_round(arena, player_accepts=False)
-            st.session_state[_KEY_AWAITING_NEXT] = True
-            st.rerun()
+    # E2: equal, prominent buttons — neither implies the "right" choice.
+    # Rejecting an unfair offer at a cost is the whole point; Accept must not look preferred.
+    clicked = render_move_buttons_equal(
+        labels=["Accept", "Reject"],
+        keys=["ult_btn_accept", "ult_btn_reject"],
+    )
+    if clicked == "Accept":
+        play_responder_round(arena, player_accepts=True)
+        st.session_state[_KEY_AWAITING_NEXT] = True
+        st.rerun()
+    elif clicked == "Reject":
+        play_responder_round(arena, player_accepts=False)
+        st.session_state[_KEY_AWAITING_NEXT] = True
+        st.rerun()
 
 
 # ---------------------------------------------------------------------------
@@ -706,50 +702,47 @@ def render() -> None:
 
     arena: ULTArenaState | None = st.session_state[_KEY_ARENA]
 
-    # --- Setup / Start ---
+    # --- Setup / Start (E5: Start above the fold) ---
     if arena is None:
-        game_briefing(
-            story=STORY,
-            how_it_works=HOW_IT_WORKS,
-            what_to_watch=WHAT_TO_WATCH,
-            why_it_matters=WHY_IT_MATTERS,
-            your_job=YOUR_JOB,
-        )
-        st.divider()
-
-        nudge_state = get_nudge_state(progress, ULT_CONCEPT_KEY)
-        if nudge_state == NudgeState.NEW:
-            result_banner(
-                "neutral",
-                "Ready to step in?",
-                "Start with the default setup. As proposer, try offering half and notice what happens. "
-                "As responder, notice what it feels like when an offer seems unfair.",
+        # E5: hook + Your Job + Start button all above the fold;
+        # full briefing tucked into a collapsed expander below.
+        def _briefing_content() -> None:
+            game_briefing(
+                story=STORY,
+                how_it_works=HOW_IT_WORKS,
+                what_to_watch=WHAT_TO_WATCH,
+                why_it_matters=WHY_IT_MATTERS,
             )
 
-        col_start, _ = st.columns([1, 2])
-        with col_start:
-            if st.button(
-                "Start session",
-                type="primary",
-                width="stretch",
-                key="ult_start_session",
-            ):
-                arena = init_ult_arena(
-                    proposer_names=proposer_names,
-                    responder_names=responder_names,
-                    prize=prize,
-                    reputation_on=reputation_on,
-                    mystery_mode=mystery_mode,
-                )
-                st.session_state[_KEY_ARENA] = arena
-                st.session_state[_KEY_SHOW_SETUP] = False
-                st.session_state[_KEY_AWAITING_NEXT] = False
+        started = intro_above_fold(
+            hook=(
+                "One player proposes a split. The other can accept — "
+                "or reject and make sure nobody gets anything."
+            ),
+            your_job=YOUR_JOB,
+            start_button_label="Start session",
+            start_button_key="ult_start_session",
+            briefing_expander_label="Read the full briefing",
+            briefing_content_fn=_briefing_content,
+        )
 
-                nudge_state = get_nudge_state(progress, ULT_CONCEPT_KEY)
-                if nudge_state == NudgeState.NEW:
-                    arena.last_nudge_event = ULT_NUDGE_ROUND_START
+        if started:
+            arena = init_ult_arena(
+                proposer_names=proposer_names,
+                responder_names=responder_names,
+                prize=prize,
+                reputation_on=reputation_on,
+                mystery_mode=mystery_mode,
+            )
+            st.session_state[_KEY_ARENA] = arena
+            st.session_state[_KEY_SHOW_SETUP] = False
+            st.session_state[_KEY_AWAITING_NEXT] = False
 
-                st.rerun()
+            nudge_state = get_nudge_state(progress, ULT_CONCEPT_KEY)
+            if nudge_state == NudgeState.NEW:
+                arena.last_nudge_event = ULT_NUDGE_ROUND_START
+
+            st.rerun()
         return
 
     # --- Session complete ---
@@ -767,7 +760,7 @@ def render() -> None:
         _render_score(arena)
         return
 
-    # --- Active session ---
+    # --- Active session (decision dominates full width; context in expanders below) ---
     briefing_expander(
         story=STORY,
         how_it_works=HOW_IT_WORKS,
@@ -776,16 +769,13 @@ def render() -> None:
         your_job=YOUR_JOB,
     )
 
-    left_col, right_col = st.columns([3, 2], gap="large")
+    _render_score(arena)
+    st.divider()
+    _render_active_round(arena, progress)
 
-    with left_col:
-        _render_score(arena)
-        st.divider()
-        _render_active_round(arena, progress)
-
-    with right_col:
-        _render_opponent_roster(arena)
-        _render_reputation_panel(arena)
+    # Secondary context — always one click away, never competing with the decision
+    _render_opponent_roster(arena)
+    _render_reputation_panel(arena)
 
     st.divider()
     col_reset, _ = st.columns([1, 4])

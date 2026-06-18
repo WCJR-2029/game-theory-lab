@@ -300,6 +300,32 @@ div[data-testid="stButton"] > button:disabled {
     cursor: not-allowed;
 }
 
+/* ── Move buttons — equal, prominent, neither implies a best choice ─ */
+/* Applied via the .move-btn-row container rendered by render_move_buttons_equal() */
+.move-btn-row div[data-testid="stButton"] > button {
+    background: #242B36 !important;
+    color: #E2E6EA !important;
+    border: 2px solid #4A5568 !important;
+    border-radius: 10px !important;
+    padding: 0.75rem 1.5rem !important;
+    font-weight: 600 !important;
+    font-size: 1rem !important;
+    min-height: 3rem !important;
+    transition: border-color 0.15s ease, background 0.15s ease !important;
+}
+.move-btn-row div[data-testid="stButton"] > button:hover {
+    background: #2E3848 !important;
+    border-color: #E6A23C !important;
+    color: #E6A23C !important;
+}
+.move-btn-row div[data-testid="stButton"] > button:active {
+    background: #1A1F27 !important;
+}
+.move-btn-row div[data-testid="stButton"] > button:disabled {
+    opacity: 0.35 !important;
+    cursor: not-allowed !important;
+}
+
 /* ── Sidebar refinements ───────────────────────────────────────────── */
 section[data-testid="stSidebar"] {
     background: #131820;
@@ -715,6 +741,110 @@ def briefing_expander(
 """,
                 unsafe_allow_html=True,
             )
+
+
+def render_move_buttons_equal(
+    labels: list[str],
+    keys: list[str],
+    disabled: bool = False,
+) -> str | None:
+    """Render N move buttons with equal visual weight — no implied best choice.
+
+    Wraps the columns in a .move-btn-row div so the CSS equalizer applies.
+    Returns the label string of the clicked button, or None if none clicked.
+
+    Parameters
+    ----------
+    labels:   Display text for each button (e.g. ["Cooperate", "Defect"]).
+    keys:     Unique Streamlit widget keys, one per button (same length as labels).
+    disabled: If True, all buttons are disabled.
+    """
+    assert len(labels) == len(keys), "labels and keys must have the same length"
+
+    # Open the equalizer container
+    st.markdown('<div class="move-btn-row">', unsafe_allow_html=True)
+    cols = st.columns(len(labels))
+    clicked: str | None = None
+    for col, label, key in zip(cols, labels, keys):
+        with col:
+            if st.button(label, key=key, disabled=disabled, width="stretch"):
+                clicked = label
+    st.markdown('</div>', unsafe_allow_html=True)
+    return clicked
+
+
+def intro_above_fold(
+    hook: str,
+    your_job: str,
+    start_button_label: str = "Start",
+    start_button_key: str = "start_btn",
+    briefing_expander_label: str = "Read the full briefing",
+    briefing_content_fn: object = None,
+) -> bool:
+    """Render the intro screen with Start above the fold.
+
+    Layout (top to bottom):
+      1. One-line hook (bold, muted accent).
+      2. "Your job" amber strip.
+      3. START button — large, full-width in a narrow column.
+      4. Expander: "Read the full briefing" (collapsed by default).
+
+    Parameters
+    ----------
+    hook:                  One-sentence attention line (plain text).
+    your_job:              Single most-actionable instruction for the player.
+    start_button_label:    Label on the start button.
+    start_button_key:      Unique Streamlit key for the start button.
+    briefing_expander_label: Expander header text.
+    briefing_content_fn:   Zero-argument callable that renders the briefing
+                           content inside the expander.  If None the expander
+                           is omitted.
+
+    Returns
+    -------
+    True if the Start button was clicked this rerun, False otherwise.
+    """
+    # Hook line
+    st.markdown(
+        f'<div style="font-size:1.05rem;color:#C8CDD2;margin-bottom:0.65rem;">'
+        f'{hook}'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    # "Your job" amber strip
+    st.markdown(
+        f"""
+<div style="max-width:52rem;background:{_SURFACE};border-left:3px solid {_ACCENT};
+            padding:0.6rem 1rem 0.6rem 1.1rem;margin-bottom:1rem;border-radius:0 8px 8px 0;">
+  <div style="font-size:0.72rem;font-weight:600;letter-spacing:0.08em;
+              text-transform:uppercase;color:{_ACCENT};margin-bottom:0.25rem;">
+    Your job each round:
+  </div>
+  <div style="font-size:0.92rem;line-height:1.5;color:{_TEXT};">
+    {your_job}
+  </div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+
+    # Start button — narrower column so it doesn't span the full screen
+    col_btn, _ = st.columns([1, 2])
+    with col_btn:
+        clicked = st.button(
+            start_button_label,
+            key=start_button_key,
+            type="primary",
+            width="stretch",
+        )
+
+    # Briefing expander (collapsed)
+    if briefing_content_fn is not None:
+        with st.expander(f"ℹ️  {briefing_expander_label}"):
+            briefing_content_fn()
+
+    return bool(clicked)
 
 
 def arena_reveal(headline: str, body: str) -> None:
