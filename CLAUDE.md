@@ -6,8 +6,15 @@ repeatable, with scalable difficulty. A sandbox, not a course. Built in phases; 
 
 ---
 
-## Current Phase: POLISH REFINEMENT (cold-review driven) — Tier 1 Experience (2026-06-18)
-**Status:** A 4-lens cold "unseen eye" review (product · UX · code · game-theory) was run; findings approved. Working three tiers IN ORDER via /plan: **Tier 1 Experience** (hide standings during play → debrief; equal/bigger move buttons; shorter PD + fast-forward; de-dup viz; Start above the fold) → **Tier 2 Coherence+Teaching** (menu progression; 4 pedagogical sentences incl. Stag Hunt risk-dominance + Chicken commitment caveat + Ultimatum proposer SPE; light "where else?" transfer expander; soften replay claim + deepen Schelling) → **Tier 3 Engineering** (one shared live-play controller, rebalanced tests, shared constants). Plan: `docs/phases/polish-refinement/plan.md`. Review notes: `~/.claude/scratchpad/2026-06-18_GTL-cold-review.md` (private).
+## Status: COMPLETE & STABLE — six concepts, fully polished (last updated 2026-06-18)
+All six game concepts are built, visually elevated (Refined Dark Lab), onboarded (per-game briefings + end-of-run reveals + a "where else does this shape show up?" transfer beat), and refined per a 4-lens cold review across three tiers (Experience focus · Coherence + Teaching · Engineering dedup). **778 tests pass, AppTest-gated, stderr-clean, de-personalized.** Run `streamlit run app.py`.
+
+### ▶ When you come back — where to resume
+- **Run it:** `python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && streamlit run app.py`
+- **Add the next game (rung):** run **`/plan`** — it reads this Status, grooms the new concept interview-first, then builds after sign-off. Pattern: one polished, playable slice per phase. A new game = a module under `gtlab/concepts/<name>/` exporting `render()`, registered in `gtlab/concepts/registry.py`, reusing the shared engine + `gtlab/ui/` (theme, nudges, progress, briefing/transfer helpers).
+- **Future bench (candidate next rungs):** repeated games & reputation · costly signaling · zero-sum vs positive-sum · dominant strategies / Nash (felt then named).
+- **Deferred polish item:** Schelling partner-draw randomization (minor — existing weighted draw is fine). Other deferred items: `docs/polish-backlog.md`.
+- **Design history / the "why":** `docs/ADRs/` (ADR-001..012) and `docs/phases/`.
 
 ### (prior) POLISH COMPLETE — Refined Dark Lab + onboarding across all six (2026-06-18)
 **Status:** All six concepts elevated to the **Refined Dark Lab** design system (ADR-012): shared `gtlab/ui/theme.py` (cards, result banners, stat pills, Altair leaderboards, `game_briefing`/`briefing_expander`/`arena_reveal`) + `.streamlit/config.toml`, so the Lab reads as one product. Each concept has a four-section onboarding **briefing** (story / how it works / what to watch / why it matters + a "Your job" line) accurate to its own mechanics, an end-of-run **reveal**, and a non-demoralizing round-1 standings state. A critical 3-lens review (game-theory correctness · code/structure · UX) was run and its findings fixed (briefing accuracy, dead test gate made real, replay-progress bug, RNG seeding, `use_container_width` deprecation removed repo-wide, dead-code sweep). 719 tests, AppTest-gated, stderr-clean. Stack stays Streamlit.
