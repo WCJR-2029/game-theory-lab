@@ -36,6 +36,17 @@ from gtlab.ui.theme import (
     result_banner,
     stat_pills_row,
     leaderboard_chart,
+    game_briefing,
+    briefing_expander,
+    arena_reveal,
+)
+from gtlab.ui.utils import ordinal
+from gtlab.concepts.prisoners_dilemma.briefing import (
+    STORY,
+    HOW_IT_WORKS,
+    WHAT_TO_WATCH,
+    WHY_IT_MATTERS,
+    YOUR_JOB,
 )
 
 # ---------------------------------------------------------------------------
@@ -97,19 +108,49 @@ def _render_standings(arena: ArenaState) -> None:
         st.write("No standings yet.")
         return
 
-    # Build display rows for the table
+    # Build a mapping: bot name -> masked name (for mystery mode)
+    mystery_mask: dict[str, str] = {}
+    if arena.mystery_mode:
+        letter = ord('A')
+        for idx, bot in enumerate(arena.bots):
+            if arena.opponent_display_names[idx] == "???":
+                mystery_mask[bot.name] = f"Opponent {chr(letter)}"
+            letter += 1
+
+    # Show framer when human hasn't played yet
+    human_unplayed = any(r.get("unplayed") for r in rows)
+    if human_unplayed:
+        st.caption(
+            "These are the bots' scores from playing each other. "
+            "Your bar fills in as you complete matches."
+        )
+
+    # Build display rows (ALL cells as strings → uniform column dtype so the
+    # Streamlit dataframe serializes cleanly; mixing ints with "—" breaks Arrow)
+    # and chart rows (numeric scores) from the same source data.
     display_rows = []
+    chart_rows = []
     for i, row in enumerate(rows, start=1):
-        label = HUMAN_LABEL if row["is_human"] else row["name"]
+        is_unplayed = row.get("unplayed", False)
+        if row["is_human"]:
+            label = HUMAN_LABEL
+        else:
+            label = mystery_mask.get(row["name"], row["name"])
         display_rows.append({
-            "Rank": i,
+            "Rank": "—" if is_unplayed else str(i),
             "Player": label,
-            "Score": row["total_score"],
-            "Avg/Round": f"{row['mean_score']:.2f}" if row["total_rounds"] > 0 else "-",
+            "Score": "—" if is_unplayed else str(row["total_score"]),
+            "Avg/Round": "—" if is_unplayed else (
+                f"{row['mean_score']:.2f}" if row["total_rounds"] > 0 else "-"
+            ),
+        })
+        # Chart uses real numbers; unplayed → 0 (no visible bar)
+        chart_rows.append({
+            "name": label,
+            "score": 0 if is_unplayed else row["total_score"],
         })
 
     # Altair chart — YOU bar in amber
-    chart_rows = [{"name": r["Player"], "score": r["Score"]} for r in display_rows]
     leaderboard_chart(chart_rows, highlight_name=HUMAN_LABEL)
 
     # Styled dataframe — YOU row highlighted
@@ -121,7 +162,7 @@ def _render_standings(arena: ArenaState) -> None:
         return [""] * len(row)
 
     styled = df.style.apply(highlight_human, axis=1)
-    st.dataframe(styled, use_container_width=True, hide_index=True)
+    st.dataframe(styled, width="stretch", hide_index=True)
 
 
 # ---------------------------------------------------------------------------
@@ -137,7 +178,7 @@ def _render_move_buttons(disabled: bool = False) -> str | None:
             "Cooperate",
             key="pd_btn_cooperate",
             disabled=disabled,
-            use_container_width=True,
+            width="stretch",
             type="primary",
         ):
             choice = "cooperate"
@@ -146,7 +187,7 @@ def _render_move_buttons(disabled: bool = False) -> str | None:
             "Defect",
             key="pd_btn_defect",
             disabled=disabled,
-            use_container_width=True,
+            width="stretch",
         ):
             choice = "defect"
     return choice
@@ -310,6 +351,74 @@ def _render_current_match_panel(arena: ArenaState, progress: dict) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _make_reveal_body(rows: list[dict]) -> str:
+    """Generate reveal text from final standings."""
+    if not rows:
+        return ""
+
+    n = len(rows)
+    top_half = [r for r in rows[:max(1, n // 2)] if not r["is_human"]]
+    bottom_half = [r for r in rows[max(1, n // 2):] if not r["is_human"]]
+
+    # Find top non-human strategy
+    top_bot = None
+    for r in rows:
+        if not r["is_human"]:
+            top_bot = r
+            break
+
+    tft_names = {"Tit for Tat", "Generous Tit for Tat"}
+    always_defect_name = "Always Defect"
+    always_coop_name = "Always Cooperate"
+
+    top_names = {r["name"] for r in top_half}
+    bottom_names = {r["name"] for r in bottom_half}
+
+    sentences = []
+
+    if top_bot:
+        sentences.append(
+            f"{top_bot['name']} finished at the top — "
+            + (
+                "never betraying first, but returning defection in kind."
+                if top_bot["name"] in tft_names
+                else "its approach held up across the whole arena."
+            )
+        )
+
+    if always_defect_name in bottom_names:
+        sentences.append(
+            "Always Defect squeezed opponents early but sank in the final standings — "
+            "the strategies that remember don't keep rewarding it."
+        )
+    elif always_defect_name in top_names:
+        sentences.append(
+            "Always Defect landed near the top — worth noticing what that says about "
+            "who it was paired against."
+        )
+
+    if always_coop_name in bottom_names:
+        sentences.append(
+            "Always Cooperate finished low — generous to the end, and consistently exploited for it."
+        )
+
+    if tft_names & top_names:
+        tft_in_top = list(tft_names & top_names)[0]
+        if top_bot is None or tft_in_top != top_bot["name"]:
+            sentences.append(
+                f"{tft_in_top} held its own without ever betraying first — "
+                "the iterated game rewards strategies that can be trusted."
+            )
+
+    if not sentences:
+        sentences.append(
+            "The standings reflect the full arc of every match — "
+            "not just individual rounds, but what each approach looked like over time."
+        )
+
+    return " ".join(sentences[:3])
+
+
 def _render_debrief(arena: ArenaState, progress: dict) -> None:
     rows = compute_standings(arena)
     your_rank = next((i + 1 for i, r in enumerate(rows) if r["is_human"]), len(rows))
@@ -321,12 +430,16 @@ def _render_debrief(arena: ArenaState, progress: dict) -> None:
         headline = f"Top of the table — {your_score} pts"
     elif your_rank <= max(1, total // 2):
         kind = "neutral"
-        headline = f"Finished {_ordinal(your_rank)} of {total} — {your_score} pts"
+        headline = f"Finished {ordinal(your_rank)} of {total} — {your_score} pts"
     else:
         kind = "draw"
-        headline = f"Finished {_ordinal(your_rank)} of {total} — {your_score} pts"
+        headline = f"Finished {ordinal(your_rank)} of {total} — {your_score} pts"
 
     result_banner(kind, headline)
+
+    reveal_body = _make_reveal_body(rows)
+    if reveal_body:
+        arena_reveal("What just happened in there", reveal_body)
 
     nudge_state = get_nudge_state(progress, CONCEPT_KEY)
     exp = progress.get("concepts", {}).get(CONCEPT_KEY, 0)
@@ -351,11 +464,6 @@ def _render_debrief(arena: ArenaState, progress: dict) -> None:
         st.session_state[_KEY_SHOW_SETUP] = True
         st.session_state[_KEY_LAST_NUDGE] = None
         st.rerun()
-
-
-def _ordinal(n: int) -> str:
-    suffixes = {1: "st", 2: "nd", 3: "rd"}
-    return f"{n}{suffixes.get(n if n <= 3 else 0, 'th')}"
 
 
 # ---------------------------------------------------------------------------
@@ -394,31 +502,31 @@ def render() -> None:
 
     # --- Setup / Start Run ---
     if arena is None:
-        st.write(
-            "You're about to enter a round-robin tournament. "
-            "You'll play a series of matches, one against each strategy in the roster. "
-            "Meanwhile, the bots play their own matches - and everyone's scores update in real time."
+        # Onboarding briefing — full four-section panel on the intro screen
+        game_briefing(
+            story=STORY,
+            how_it_works=HOW_IT_WORKS,
+            what_to_watch=WHAT_TO_WATCH,
+            why_it_matters=WHY_IT_MATTERS,
+            your_job=YOUR_JOB,
         )
-        st.write(
-            "Each match is the classic Prisoner's Dilemma: "
-            "you and your opponent each choose to cooperate or defect, "
-            "independently, every round. Repeated play changes everything."
-        )
+
+        st.divider()
 
         nudge_state = get_nudge_state(progress, CONCEPT_KEY)
         if nudge_state == NudgeState.NEW:
             result_banner(
                 "neutral",
-                "First time here?",
-                "Just press Start and play a few rounds. "
-                "Try cooperating for a while and see what happens, "
-                "then try defecting and notice what changes. "
-                "The explanation comes after the experience.",
+                "Ready to step in?",
+                "Press Start and play a few rounds. "
+                "Try cooperating for a stretch and notice what the bots do — "
+                "then flip to defecting and watch how things change. "
+                "The interesting part shows up over time.",
             )
 
         col_start, _ = st.columns([1, 2])
         with col_start:
-            if st.button("Start run", type="primary", use_container_width=True, key="pd_start_run"):
+            if st.button("Start run", type="primary", width="stretch", key="pd_start_run"):
                 arena = init_arena(selected_names, noise, mystery_mode)
                 st.session_state[_KEY_ARENA] = arena
                 st.session_state[_KEY_SHOW_SETUP] = False
@@ -442,6 +550,15 @@ def render() -> None:
         return
 
     # --- Active run: live play ---
+    # Briefing expander — always one click away during a run
+    briefing_expander(
+        story=STORY,
+        how_it_works=HOW_IT_WORKS,
+        what_to_watch=WHAT_TO_WATCH,
+        why_it_matters=WHY_IT_MATTERS,
+        your_job=YOUR_JOB,
+    )
+
     left_col, right_col = st.columns([1, 1], gap="large")
 
     with left_col:

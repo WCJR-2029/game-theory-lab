@@ -39,8 +39,6 @@ from gtlab.concepts.ultimatum.model import (
     update_reputation,
 )
 from gtlab.concepts.ultimatum.profiles import (
-    PROPOSER_PROFILES,
-    RESPONDER_PROFILES,
     ProposerProfile,
     ResponderProfile,
     propose,

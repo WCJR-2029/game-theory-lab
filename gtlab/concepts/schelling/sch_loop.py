@@ -80,6 +80,9 @@ class SCHSession:
     # Nudge tracking
     last_nudge_event: Optional[str] = None
 
+    # Convergence tracking — consecutive matches (any kind) for SCH_NUDGE_CONVERGENCE
+    consecutive_focal_matches: int = 0
+
     # UI flow flags
     submitted: bool = False            # True after player submits pick
     session_started: bool = False
@@ -187,6 +190,9 @@ def submit_pick(session: SCHSession, player_pick: object) -> dict:
 
     if matched:
         session.matches_won += 1
+        session.consecutive_focal_matches += 1
+    else:
+        session.consecutive_focal_matches = 0
     session.rounds_played += 1
 
     # Classify nudge event
@@ -196,6 +202,7 @@ def submit_pick(session: SCHSession, player_pick: object) -> dict:
         is_focal_vs_logic=is_focal_vs_logic(puzzle),
         player_pick=player_pick,
         partner_pick=partner,
+        consecutive_focal_matches=session.consecutive_focal_matches,
     )
     session.last_nudge_event = nudge_event
 

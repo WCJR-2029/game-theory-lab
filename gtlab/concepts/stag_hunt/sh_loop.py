@@ -22,7 +22,6 @@ from typing import Optional
 
 from gtlab.engine import (
     COOPERATE, DEFECT, Move, History, Strategy,
-    HumanStrategy,
     run_tournament,
     STAG_HUNT_GAME,
 )
@@ -62,54 +61,6 @@ def _apply_noise_sh(move: Move, noise: float, rng: random.Random) -> tuple[Move,
 
 
 # ---------------------------------------------------------------------------
-# Human strategy extension — supports the two-phase signal + commit cycle
-# ---------------------------------------------------------------------------
-
-
-class SHHumanStrategy(HumanStrategy):
-    """Human strategy with Stag Hunt signaling support.
-
-    The UI calls:
-      1. ``set_signal(move)``  before the engine calls ``signal()``
-      2. ``set_move(move)``    before the engine calls ``signal_aware_choose()``
-
-    The announced move (signal) and actual move (commit) may differ —
-    that's the whole point: the player can bluff too.
-    """
-
-    name = "You"
-    description = "The human player. Signal and commit are supplied by the interface."
-
-    def __init__(self) -> None:
-        super().__init__()
-        self._pending_signal: Optional[Move] = None
-
-    def set_signal(self, move: Move) -> None:
-        """Supply the announcement before the engine calls signal()."""
-        self._pending_signal = move
-
-    def signal(self, history: History) -> Move:
-        """Return the announced move (must be set via set_signal first)."""
-        if self._pending_signal is None:
-            # Fallback: announce whatever choose() would play (honest default).
-            # Should not happen in normal UI flow.
-            return COOPERATE
-        sig = self._pending_signal
-        self._pending_signal = None
-        return sig
-
-    def signal_aware_choose(
-        self, history: History, opp_announced: Optional[Move]
-    ) -> Move:
-        """Return the committed move (must be set via set_move first)."""
-        return self.choose(history)
-
-    def reset(self) -> None:
-        super().reset()
-        self._pending_signal = None
-
-
-# ---------------------------------------------------------------------------
 # Arena state dataclass
 # ---------------------------------------------------------------------------
 
@@ -127,9 +78,6 @@ class SHArenaState:
     selected_bot_names: list[str] = field(default_factory=lambda: list(SH_DEFAULT_SELECTED))
     noise: float = 0.0
     mystery_mode: bool = False
-
-    # Human player
-    human: SHHumanStrategy = field(default_factory=SHHumanStrategy)
 
     # Bot instances (fresh per run)
     bots: list[Strategy] = field(default_factory=list)
@@ -206,7 +154,6 @@ def init_sh_arena(
         mystery_mode=mystery_mode,
     )
     state.bots = build_sh_roster(selected_bot_names)
-    state.human = SHHumanStrategy()
     state.rng = random.Random()
 
     state.bot_standings = {
@@ -428,6 +375,7 @@ def compute_sh_standings(state: SHArenaState) -> list[dict]:
         if state.player_total_rounds > 0
         else 0.0
     )
+    human_unplayed = state.player_matches_played == 0
     rows.append({
         "name": SH_HUMAN_LABEL,
         "total_score": state.player_total_score,
@@ -435,6 +383,8 @@ def compute_sh_standings(state: SHArenaState) -> list[dict]:
         "mean_score": round(human_mean, 2),
         "is_human": True,
         "is_current_opponent": False,
+        "unplayed": human_unplayed,
+        "matches_played": state.player_matches_played,
     })
 
     current_opp_name = (

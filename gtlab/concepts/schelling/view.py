@@ -1,5 +1,5 @@
 """
-Schelling Points concept view (Phase 4, T2–T4).
+Schelling Points concept view — Refined Dark Lab polish (ADR-012).
 
 Called by the Lab shell when the player selects "Schelling Points" from the menu.
 
@@ -53,6 +53,23 @@ from gtlab.ui.progress import (
     get_nudge_state,
     NudgeState,
 )
+from gtlab.ui.theme import (
+    inject_theme,
+    app_header,
+    section_title,
+    result_banner,
+    stat_pills_row,
+    game_briefing,
+    briefing_expander,
+    arena_reveal,
+)
+from gtlab.concepts.schelling.briefing import (
+    STORY,
+    HOW_IT_WORKS,
+    WHAT_TO_WATCH,
+    WHY_IT_MATTERS,
+    YOUR_JOB,
+)
 
 # ---------------------------------------------------------------------------
 # Session-state keys (sch_-prefixed throughout)
@@ -75,7 +92,7 @@ def _init_session_state() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Sidebar — T4 knobs
+# Sidebar — knobs
 # ---------------------------------------------------------------------------
 
 
@@ -126,11 +143,7 @@ def _render_sch_sidebar() -> tuple[bool, list[str]]:
 
 
 def _render_integer_range_input(puzzle, submitted: bool) -> object | None:
-    """Render an integer entry for IntegerRange choice spaces.
-
-    For num_any_positive (hi=10_000), treat as effectively unbounded — show a
-    generous number_input with no upper label, just 'any positive whole number'.
-    """
+    """Render an integer entry for IntegerRange choice spaces."""
     cs: IntegerRange = puzzle.choice_space
     is_open = cs.hi >= 10_000  # sentinel for the 'effectively unbounded' puzzle
 
@@ -146,7 +159,7 @@ def _render_integer_range_input(puzzle, submitted: bool) -> object | None:
         )
     else:
         val = st.number_input(
-            f"Your pick ({cs.lo}–{cs.hi}):",
+            f"Your pick ({cs.lo}-{cs.hi}):",
             min_value=cs.lo,
             max_value=cs.hi,
             value=cs.lo,
@@ -174,7 +187,7 @@ def _render_split_input(puzzle, submitted: bool) -> object | None:
     cs: Split = puzzle.choice_space
 
     st.caption(
-        f"Write down your split: your share and the stranger's share — "
+        f"Write down your split: your share and the stranger's share - "
         f"they must add up to {cs.total}."
     )
 
@@ -190,7 +203,6 @@ def _render_split_input(puzzle, submitted: bool) -> object | None:
             disabled=submitted,
         )
     with col2:
-        # Stranger's share is always derived — display as a metric, no key needed
         their_share = cs.total - int(my_share)
         st.metric("Stranger's share", their_share)
 
@@ -224,10 +236,10 @@ def _format_answer(answer: object) -> str:
 def _render_focal_distribution(puzzle) -> None:
     """Show the focal distribution as a gentle visual bar.
 
-    Copy: 'a typical crowd tends to…' — never percentage claims.
+    Copy: 'a typical crowd tends to...' — never percentage claims.
     Weights are normalized to relative bars, not shown as % of real data.
     """
-    st.caption("A typical crowd tends to…")
+    st.caption("A typical crowd tends to...")
     dist = reveal_distribution(puzzle)
     total_weight = sum(w for _, w in dist)
     if total_weight == 0:
@@ -255,7 +267,7 @@ def _render_sch_nudge(event_key: str | None, progress: dict) -> None:
     if nudge_data is None:
         return
     if nudge_state == NudgeState.NEW:
-        st.info(f"**{nudge_data['headline']}**  \n{nudge_data['body']}")
+        result_banner("neutral", nudge_data["headline"], nudge_data["body"])
 
 
 def _render_sch_on_demand_nudge(event_key: str | None, progress: dict) -> None:
@@ -271,20 +283,75 @@ def _render_sch_on_demand_nudge(event_key: str | None, progress: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Running score bar
+# Running score
 # ---------------------------------------------------------------------------
 
 
 def _render_score_bar(session: SCHSession) -> None:
-    """Show matches / rounds at the top of the game area."""
+    """Show matches / rounds using stat_pills_row."""
     if session.rounds_played == 0:
-        st.caption("Match score: 0 / 0")
+        stat_pills_row([("Match score", "0 / 0")])
         return
     pct = session.matches_won / session.rounds_played * 100
-    st.caption(
-        f"Match score: **{session.matches_won} / {session.rounds_played}** "
-        f"({pct:.0f}% matched)"
+    stat_pills_row([
+        ("Matched", f"{session.matches_won} / {session.rounds_played}"),
+        ("Rate", f"{pct:.0f}%"),
+    ])
+
+
+# ---------------------------------------------------------------------------
+# Session-complete reveal body
+# ---------------------------------------------------------------------------
+
+
+def _make_reveal_body(session: SCHSession) -> str:
+    """Generate reveal text from final session stats."""
+    matched = session.matches_won
+    played = session.rounds_played
+    pct = matched / played * 100 if played > 0 else 0
+
+    # Count focal-vs-logic puzzles played and how many matched
+    played_puzzles = session.puzzle_queue[:session.current_index]
+    hard_puzzles = [p for p in played_puzzles if is_focal_vs_logic(p)]
+
+    sentences = []
+
+    # Open with the match rate
+    if pct >= 70:
+        sentences.append(
+            f"You matched {matched} out of {played} puzzles - "
+            "a strong convergence rate that suggests you read the salience well."
+        )
+    elif pct >= 40:
+        sentences.append(
+            f"You matched {matched} out of {played} puzzles - "
+            "a mix of convergence and divergence, "
+            "which is where the interesting variation lives."
+        )
+    else:
+        sentences.append(
+            f"You matched {matched} out of {played} puzzles. "
+            "The gaps are worth examining: where you diverged, "
+            "a different answer felt just as obvious to the stranger."
+        )
+
+    # Hard mode commentary
+    if hard_puzzles:
+        sentences.append(
+            "The hard-mode puzzles mixed in answers where a logical choice competed "
+            "with the obvious one - those are the rounds where salience is clearest, "
+            "because something non-logical was doing the coordinating."
+        )
+
+    # Closing focal-point insight (named only after they've felt it)
+    sentences.append(
+        "What just happened across all of these rounds has a name: "
+        "a focal point is an answer that feels inevitable to everyone, "
+        "without anyone saying so. "
+        "No logic forces it - something in the structure of the problem makes it stand out."
     )
+
+    return " ".join(sentences[:3])
 
 
 # ---------------------------------------------------------------------------
@@ -293,31 +360,52 @@ def _render_score_bar(session: SCHSession) -> None:
 
 
 def _render_session_complete(session: SCHSession, progress: dict) -> None:
-    st.success("You've played through every puzzle in this session!")
-
     pct = (
         session.matches_won / session.rounds_played * 100
         if session.rounds_played > 0
         else 0
     )
-    st.write(
-        f"You matched **{session.matches_won} out of {session.rounds_played}** puzzles "
-        f"({pct:.0f}%)."
-    )
+
+    if pct >= 70:
+        banner_kind = "win"
+        headline = (
+            f"Session complete - {session.matches_won} / {session.rounds_played} matched "
+            f"({pct:.0f}%)"
+        )
+    elif pct >= 40:
+        banner_kind = "neutral"
+        headline = (
+            f"Session complete - {session.matches_won} / {session.rounds_played} matched "
+            f"({pct:.0f}%)"
+        )
+    else:
+        banner_kind = "draw"
+        headline = (
+            f"Session complete - {session.matches_won} / {session.rounds_played} matched "
+            f"({pct:.0f}%)"
+        )
+
+    result_banner(banner_kind, headline)
+
+    reveal_body = _make_reveal_body(session)
+    if reveal_body:
+        arena_reveal("What just happened in there", reveal_body)
 
     nudge_state = get_nudge_state(progress, SCH_CONCEPT_KEY)
     exp = progress.get("concepts", {}).get(SCH_CONCEPT_KEY, 0)
 
     if nudge_state == NudgeState.NEW:
-        st.info(
-            "Try hard mode in the sidebar to see focal-vs-logic puzzles — "
+        result_banner(
+            "neutral",
+            "Want more?",
+            "Try hard mode in the sidebar to see focal-vs-logic puzzles - "
             "where the clever answer loses to the obvious one. "
-            "Or change the categories to explore different coordination scenarios."
+            "Or change the categories to explore different coordination scenarios.",
         )
     elif nudge_state == NudgeState.PROGRESSING:
         st.caption(
             f"({exp} session{'s' if exp != 1 else ''} completed. "
-            "Hard mode adds puzzles where salience beats logic — "
+            "Hard mode adds puzzles where salience beats logic - "
             "the most counterintuitive coordination moments.)"
         )
 
@@ -341,7 +429,7 @@ def _render_puzzle_panel(session: SCHSession, progress: dict) -> None:
 
     # Puzzle header
     cat_label = CATEGORY_DISPLAY.get(puzzle.category, puzzle.category)
-    st.caption(f"Category: {cat_label}")
+    section_title(f"Category: {cat_label}")
     if is_focal_vs_logic(puzzle) and session.hard_mode:
         st.caption("(Hard mode puzzle)")
 
@@ -352,11 +440,7 @@ def _render_puzzle_panel(session: SCHSession, progress: dict) -> None:
     if not session.submitted:
         player_pick = _render_player_input(puzzle, submitted=False)
 
-        if isinstance(puzzle.choice_space, Split):
-            # Validation already done inside _render_split_input
-            can_submit = player_pick is not None
-        else:
-            can_submit = player_pick is not None
+        can_submit = player_pick is not None
 
         st.write("")
         col_submit, _ = st.columns([1, 3])
@@ -364,7 +448,7 @@ def _render_puzzle_panel(session: SCHSession, progress: dict) -> None:
             if st.button(
                 "Lock in my pick",
                 type="primary",
-                use_container_width=True,
+                width="stretch",
                 key=f"sch_submit_{puzzle.id}",
                 disabled=not can_submit,
             ):
@@ -390,14 +474,17 @@ def _render_puzzle_panel(session: SCHSession, progress: dict) -> None:
         player_label = _format_answer(session.player_pick)
 
         if session.matched:
-            st.success(
-                f"**Match!** The stranger also picked **{partner_label}**. "
-                f"You both landed on the same answer — without a word."
+            result_banner(
+                "win",
+                "Match!",
+                f"The stranger also picked {partner_label}. "
+                "You both landed on the same answer - without a word.",
             )
         else:
-            st.error(
-                f"**No match.** You picked **{player_label}**; "
-                f"the stranger picked **{partner_label}**."
+            result_banner(
+                "lose",
+                "No match.",
+                f"You picked {player_label}; the stranger picked {partner_label}.",
             )
 
         st.write("")
@@ -427,7 +514,7 @@ def _render_puzzle_panel(session: SCHSession, progress: dict) -> None:
             if st.button(
                 next_label,
                 type="primary",
-                use_container_width=True,
+                width="stretch",
                 key="sch_next_puzzle",
             ):
                 advance_to_next(session)
@@ -447,6 +534,7 @@ def render() -> None:
     The shell owns page config and the back-to-menu control;
     this function owns everything Schelling-specific.
     """
+    inject_theme()
     _init_session_state()
 
     # Load shared progress
@@ -454,36 +542,39 @@ def render() -> None:
         st.session_state.progress = load_progress()
     progress = st.session_state.progress
 
-    # Sidebar knobs (T4)
+    # Sidebar knobs
     hard_mode, selected_categories = _render_sch_sidebar()
 
     # Main header
-    st.title("Schelling Points")
-    st.caption(
-        "You and a silent stranger — no communication, no agreement. "
-        "Just pick the same thing. Some answers feel inevitable. Why?"
+    app_header(
+        title="Schelling Points",
+        subtitle=(
+            "You and a silent stranger - no communication, no agreement. "
+            "Just pick the same thing. Some answers feel inevitable. Why?"
+        ),
     )
 
     session: SCHSession | None = st.session_state[_KEY_SESSION]
 
     # --- Setup / Start ---
     if session is None:
-        st.write(
-            "Each round: read the scenario, make your pick, then find out "
-            "what the stranger chose. You win only if you match — and there's "
-            "no message you can send, no signal you can read."
+        game_briefing(
+            story=STORY,
+            how_it_works=HOW_IT_WORKS,
+            what_to_watch=WHAT_TO_WATCH,
+            why_it_matters=WHY_IT_MATTERS,
+            your_job=YOUR_JOB,
         )
-        st.write(
-            "Play a few puzzles and notice which answers feel obvious — "
-            "and whether 'obvious' is the same for everyone."
-        )
+
+        st.divider()
 
         nudge_state = get_nudge_state(progress, SCH_CONCEPT_KEY)
         if nudge_state == NudgeState.NEW:
-            st.info(
-                "**First time here?** "
-                "Just pick whatever feels obvious to you — there's no trick. "
-                "The interesting part comes after the reveal."
+            result_banner(
+                "neutral",
+                "First time here?",
+                "Just pick whatever feels obvious to you - there's no trick. "
+                "The interesting part comes after the reveal.",
             )
 
         col_start, _ = st.columns([1, 2])
@@ -491,7 +582,7 @@ def render() -> None:
             if st.button(
                 "Start session",
                 type="primary",
-                use_container_width=True,
+                width="stretch",
                 key="sch_start_session",
             ):
                 session = init_sch_session(hard_mode, selected_categories)
@@ -511,6 +602,15 @@ def render() -> None:
         return
 
     # --- Active session ---
+    # Briefing expander — always one click away during a session
+    briefing_expander(
+        story=STORY,
+        how_it_works=HOW_IT_WORKS,
+        what_to_watch=WHAT_TO_WATCH,
+        why_it_matters=WHY_IT_MATTERS,
+        your_job=YOUR_JOB,
+    )
+
     left_col, right_col = st.columns([3, 1], gap="large")
 
     with left_col:
@@ -526,7 +626,7 @@ def render() -> None:
         _render_puzzle_panel(session, progress)
 
     with right_col:
-        st.subheader("This session")
+        section_title("This session")
         _render_score_bar(session)
 
         if hard_mode:

@@ -71,9 +71,10 @@ html, body, [class*="css"] {
     letter-spacing: -0.01em;
 }
 
-/* Main content area */
+/* Main content area — clear Streamlit's fixed top toolbar (~3.75rem) so the
+   masthead/header isn't clipped under the Deploy/menu bar */
 section[data-testid="stMain"] > div {
-    padding-top: 1.75rem;
+    padding-top: 4.5rem;
 }
 
 /* ── Headings ──────────────────────────────────────────────────────── */
@@ -401,7 +402,7 @@ def concept_card(
             "Play",
             key=f"menu_play_{key}",
             type="primary",
-            use_container_width=True,
+            width="stretch",
         )
         if clicked and on_play is not None:
             on_play()
@@ -410,7 +411,7 @@ def concept_card(
             "Coming soon",
             key=f"menu_coming_{key}",
             disabled=True,
-            use_container_width=True,
+            width="stretch",
         )
 
 
@@ -513,7 +514,7 @@ def leaderboard_chart(
             "Player": [r["name"] for r in rows],
             "Score":  [r["score"] for r in rows],
         }).set_index("Player")
-        st.bar_chart(_fallback_df, height=height, use_container_width=True)
+        st.bar_chart(_fallback_df, height=height, width="stretch")
         return
 
     df = pd.DataFrame(rows)
@@ -587,4 +588,159 @@ def leaderboard_chart(
         )
     )
 
-    st.altair_chart(chart, use_container_width=True)
+    st.altair_chart(chart, width="stretch")
+
+
+# ---------------------------------------------------------------------------
+# V3 — Onboarding briefing helpers
+# ---------------------------------------------------------------------------
+
+
+def game_briefing(
+    story: str,
+    how_it_works: str,
+    what_to_watch: str,
+    why_it_matters: str,
+    your_job: str | None = None,
+) -> None:
+    """Render a full onboarding briefing panel in the Refined Dark Lab style.
+
+    Show this once on the concept's intro/setup screen — before the player
+    starts a run — so they know what they're stepping into.
+
+    Parameters
+    ----------
+    story:
+        The classic setup described in plain, vivid language.
+    how_it_works:
+        What the player actually does, who/what they face, and how scoring
+        works in words (no formulas).
+    what_to_watch:
+        An invitation to notice the central dynamic, NOT the answer.
+    why_it_matters:
+        Where this concept shows up in the real world / why it's worth
+        carrying around.
+    your_job:
+        Optional single most-actionable instruction rendered as an amber strip
+        above the four sections.
+    """
+    # Section label above the whole briefing block
+    section_title("What is this game?")
+
+    if your_job is not None:
+        st.markdown(
+            f"""
+<div style="max-width:52rem;background:{_SURFACE};border-left:3px solid {_ACCENT};
+            padding:0.75rem 1rem 0.75rem 1.1rem;margin-bottom:0.85rem;border-radius:0 8px 8px 0;">
+  <div style="font-size:0.75rem;font-weight:600;letter-spacing:0.08em;
+              text-transform:uppercase;color:{_ACCENT};margin-bottom:0.35rem;">
+    Your job each round:
+  </div>
+  <div style="font-size:0.92rem;line-height:1.55;color:{_TEXT};">
+    {your_job}
+  </div>
+</div>
+""",
+            unsafe_allow_html=True,
+        )
+
+    sections = [
+        ("The story", story),
+        ("How it works here", how_it_works),
+        ("What to watch for", what_to_watch),
+        ("Why it matters", why_it_matters),
+    ]
+
+    for label, body in sections:
+        st.markdown(
+            f"""
+<div class="lab-card lab-card-accent" style="max-width:52rem;">
+  <div style="font-size:0.7rem;font-weight:600;letter-spacing:0.09em;
+              text-transform:uppercase;color:{_ACCENT};margin-bottom:0.5rem;">
+    {label}
+  </div>
+  <div style="font-size:0.92rem;line-height:1.65;color:{_TEXT};">
+    {body}
+  </div>
+</div>
+""",
+            unsafe_allow_html=True,
+        )
+
+
+def briefing_expander(
+    story: str,
+    how_it_works: str,
+    what_to_watch: str,
+    why_it_matters: str,
+    label: str = "What is this game?",
+    your_job: str | None = None,
+) -> None:
+    """Render a collapsed expander that re-surfaces the briefing during play.
+
+    Place near the top of the active-play view so a returning player can
+    re-read the orientation without leaving their round.
+
+    Parameters
+    ----------
+    story / how_it_works / what_to_watch / why_it_matters:
+        Same content passed to game_briefing.
+    label:
+        The expander's visible header text.
+    your_job:
+        Optional single most-actionable instruction shown as the first section.
+    """
+    with st.expander(f"ℹ️  {label}"):
+        sections = []
+        if your_job is not None:
+            sections.append(("Your job each round:", your_job))
+        sections += [
+            ("The story", story),
+            ("How it works here", how_it_works),
+            ("What to watch for", what_to_watch),
+            ("Why it matters", why_it_matters),
+        ]
+        for sec_label, body in sections:
+            st.markdown(
+                f"""
+<div style="margin-bottom:0.75rem;">
+  <div style="font-size:0.68rem;font-weight:600;letter-spacing:0.09em;
+              text-transform:uppercase;color:{_ACCENT};margin-bottom:0.25rem;">
+    {sec_label}
+  </div>
+  <div style="font-size:0.88rem;line-height:1.6;color:{_TEXT};">
+    {body}
+  </div>
+</div>
+""",
+                unsafe_allow_html=True,
+            )
+
+
+def arena_reveal(headline: str, body: str) -> None:
+    """Render a calm end-of-run reflective panel — the 'play → feel → reveal' closer.
+
+    Distinct from result_banner: larger, calmer, amber-left-border, designed for
+    2-3 sentences that name what just happened without having stated it up front.
+
+    Parameters
+    ----------
+    headline:
+        Short phrase naming the insight (e.g. "What just happened in there").
+    body:
+        2-3 plain-language sentences describing what the standings showed.
+    """
+    st.markdown(
+        f"""
+<div class="lab-card lab-card-accent" style="max-width:52rem;padding:1.4rem 1.6rem 1.5rem;margin-top:1rem;">
+  <div style="font-size:0.78rem;font-weight:600;letter-spacing:0.09em;
+              text-transform:uppercase;color:{_ACCENT};margin-bottom:0.6rem;">
+    {headline}
+  </div>
+  <div style="font-size:1rem;line-height:1.7;color:{_TEXT};">
+    {body}
+  </div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )

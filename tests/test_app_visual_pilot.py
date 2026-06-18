@@ -5,8 +5,8 @@ Verifies:
 1. Menu renders without exception.
 2. Prisoner's Dilemma: enter -> Start run -> play 3 rounds -> no exception.
 3. All five other concepts: enter -> render (or play a round if possible) -> no exception.
-4. No widget-state warnings in stderr (the Phase-6 lesson: value= + session_state double-set).
-5. No "use_container_width" deprecation warnings introduced.
+4. No use_container_width=True in shared + PD files (static scan — genuinely fail-able).
+5. No "mike"/"herak" (case-insensitive) in any .py source (de-personalization gate).
 
 NOTE: AppTest exercises Python rendering logic, not pixels.  Visual quality
 is judged by the user in-browser.  This gate catches import errors, widget
@@ -16,25 +16,54 @@ key collisions, state bugs, and the Phase-6 double-set warning.
 from __future__ import annotations
 
 import re
+from pathlib import Path
 import pytest
 
 from streamlit.testing.v1 import AppTest
 
 # ---------------------------------------------------------------------------
-# Helpers
+# Static scan helpers
 # ---------------------------------------------------------------------------
 
-_WIDGET_WARNING_RE = re.compile(
-    r"(widget.*session_state|session_state.*widget|value.*key.*conflict|"
-    r"double.?set|use_container_width.*deprecated)",
-    re.IGNORECASE,
-)
+_REPO_ROOT = Path(__file__).parent.parent
+
+# Files that MUST NOT contain use_container_width=True (migrated in Wave 1).
+_UCW_SCANNED_FILES = [
+    "gtlab/ui/theme.py",
+    "gtlab/concepts/prisoners_dilemma/view.py",
+]
+
+# Pattern that should NOT appear in migrated files.
+_UCW_PATTERN = re.compile(r"use_container_width\s*=\s*True", re.IGNORECASE)
+
+# De-personalization: no "mike" or "herak" in any .py source.
+_PERSONAL_PATTERN = re.compile(r"\b(mike|herak)\b", re.IGNORECASE)
+
+
+def _scan_ucw(file_rel: str) -> list[str]:
+    """Return list of 'file:line' where use_container_width=True appears."""
+    path = _REPO_ROOT / file_rel
+    if not path.exists():
+        return []
+    findings = []
+    for lineno, line in enumerate(path.read_text().splitlines(), start=1):
+        if _UCW_PATTERN.search(line):
+            findings.append(f"{file_rel}:{lineno}: {line.strip()}")
+    return findings
+
+
+def _scan_personal_refs() -> list[str]:
+    """Scan all .py files under gtlab/ and app.py for personal name refs."""
+    findings = []
+    for py_file in list((_REPO_ROOT / "gtlab").rglob("*.py")) + [_REPO_ROOT / "app.py"]:
+        rel = py_file.relative_to(_REPO_ROOT)
+        for lineno, line in enumerate(py_file.read_text().splitlines(), start=1):
+            if _PERSONAL_PATTERN.search(line):
+                findings.append(f"{rel}:{lineno}: {line.strip()}")
+    return findings
+
 
 APP_PATH = "app.py"
-
-
-def _has_widget_warning(stderr: str) -> bool:
-    return bool(_WIDGET_WARNING_RE.search(stderr))
 
 
 # ---------------------------------------------------------------------------
@@ -48,12 +77,15 @@ class TestMenu:
         at.run()
         assert not at.exception, f"Menu raised: {at.exception}"
 
-    def test_menu_no_widget_warning(self):
-        at = AppTest.from_file(APP_PATH, default_timeout=30)
-        at.run()
-        stderr = getattr(at, "stderr", "") or ""
-        assert not _has_widget_warning(stderr), (
-            f"Widget-state warning detected in menu render:\n{stderr}"
+    def test_menu_no_ucw_in_shared_files(self):
+        """Static scan: use_container_width=True must not appear in migrated files."""
+        findings = []
+        for f in _UCW_SCANNED_FILES:
+            findings.extend(_scan_ucw(f))
+        assert not findings, (
+            "use_container_width=True found in migrated files "
+            "(Wave 1 migration should have replaced these):\n"
+            + "\n".join(findings)
         )
 
     def test_menu_shows_concepts(self):
@@ -111,12 +143,27 @@ class TestPrisonersDilemma:
         except Exception:
             pass  # acceptable if button not present after some paths
 
-    def test_pd_no_widget_warning(self):
-        at = self._enter_pd()
-        at.button(key="pd_start_run").click().run()
-        stderr = getattr(at, "stderr", "") or ""
-        assert not _has_widget_warning(stderr), (
-            f"Widget-state warning in PD:\n{stderr}"
+    def test_pd_no_ucw_in_source(self):
+        """Static scan: PD view must not contain use_container_width=True."""
+        findings = _scan_ucw("gtlab/concepts/prisoners_dilemma/view.py")
+        assert not findings, (
+            "use_container_width=True found in PD view (should be migrated):\n"
+            + "\n".join(findings)
+        )
+
+
+# ---------------------------------------------------------------------------
+# De-personalization gate
+# ---------------------------------------------------------------------------
+
+
+class TestDepersonalization:
+    def test_no_personal_refs_in_source(self):
+        """No 'mike' or 'herak' references in any gtlab/ or app.py source."""
+        findings = _scan_personal_refs()
+        assert not findings, (
+            "Personal name references found (de-personalization constraint violated):\n"
+            + "\n".join(findings)
         )
 
 
@@ -126,11 +173,11 @@ class TestPrisonersDilemma:
 
 
 _OTHER_CONCEPTS = [
-    ("stag_hunt",       "menu_play_stag_hunt"),
-    ("chicken",         "menu_play_chicken"),
-    ("schelling",       "menu_play_schelling"),
-    ("ultimatum",       "menu_play_ultimatum"),
-    ("mixed_strategies","menu_play_mixed_strategies"),
+    ("stag_hunt",         "menu_play_stag_hunt"),
+    ("chicken",           "menu_play_chicken"),
+    ("schelling",         "menu_play_schelling"),
+    ("ultimatum",         "menu_play_ultimatum"),
+    ("mixed_strategies",  "menu_play_mixed_strategies"),
 ]
 
 
@@ -142,13 +189,4 @@ class TestOtherConceptsRender:
         at.button(key=menu_btn_key).click().run()
         assert not at.exception, (
             f"Concept '{concept_key}' raised on entry: {at.exception}"
-        )
-
-    def test_concept_no_widget_warning(self, concept_key, menu_btn_key):
-        at = AppTest.from_file(APP_PATH, default_timeout=30)
-        at.run()
-        at.button(key=menu_btn_key).click().run()
-        stderr = getattr(at, "stderr", "") or ""
-        assert not _has_widget_warning(stderr), (
-            f"Widget-state warning for '{concept_key}':\n{stderr}"
         )

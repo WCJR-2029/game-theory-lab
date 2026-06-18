@@ -402,9 +402,10 @@ def compute_standings(state: ArenaState) -> list[dict]:
     rows = []
 
     # Human row
+    human_has_played = state.player_total_rounds > 0
     human_mean = (
         state.player_total_score / state.player_total_rounds
-        if state.player_total_rounds > 0
+        if human_has_played
         else 0.0
     )
     rows.append({
@@ -414,6 +415,7 @@ def compute_standings(state: ArenaState) -> list[dict]:
         "mean_score": round(human_mean, 2),
         "is_human": True,
         "is_current_opponent": False,
+        "unplayed": not human_has_played,
     })
 
     # Bot rows

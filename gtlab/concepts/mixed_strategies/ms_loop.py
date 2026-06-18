@@ -57,6 +57,7 @@ def init_ms_arena(
     opponent_name: str,
     memory_depth: int,
     mystery_mode: bool,
+    seed: int | None = None,
 ) -> MSArenaState:
     """Build a fresh MSArenaState for a new session.
 
@@ -70,6 +71,9 @@ def init_ms_arena(
         Depth for PatternReader (1-5); ignored for other opponents.
     mystery_mode : bool
         If True, opponent label is hidden in the UI.
+    seed : int | None
+        RNG seed.  ``None`` (default) gives fresh entropy; pass an int for
+        a deterministic sequence (useful in tests).
     """
     game = GAME_BY_NAME[game_name]
 
@@ -87,7 +91,7 @@ def init_ms_arena(
     return MSArenaState(
         game=game,
         opponent=opponent,
-        rng=random.Random(),  # entropy seed -- never re-seeded between rounds
+        rng=random.Random(seed),  # seed=None gives fresh entropy; pass int for deterministic test
         metrics=SessionMetrics(),
         mystery_mode=mystery_mode,
         rotating=rotating,

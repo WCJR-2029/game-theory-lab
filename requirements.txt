@@ -4,7 +4,7 @@
 pytest>=7.0
 
 # UI (T5-T11)
-streamlit>=1.33
+streamlit>=1.49
 pandas>=2.0
 altair>=5.0   # Altair leaderboard charts with per-bar color (ADR-012)
 

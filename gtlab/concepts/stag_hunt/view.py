@@ -1,9 +1,10 @@
 """
-Stag Hunt concept view (T5 + T7).
+Stag Hunt concept view.
 
 Called by the Lab shell when the player selects "Stag Hunt" from the menu.
-Mirrors the PD arena's clean single-screen feel, with the key addition of
-the two-phase announce-then-commit beat per round.
+Mirrors the PD arena's Refined Dark Lab design system (ADR-012): inject_theme(),
+shared helpers, Altair leaderboard.  Logic and state are identical to the
+pre-polish version.
 
 Session-state keys are all prefixed with ``sh_`` to avoid collisions
 with the PD arena's ``pd_``-prefixed keys.
@@ -47,6 +48,21 @@ from gtlab.ui.progress import (
     increment_experience,
     get_nudge_state,
     NudgeState,
+)
+from gtlab.ui.theme import (
+    inject_theme,
+    app_header,
+    section_title,
+    result_banner,
+    stat_pills_row,
+    leaderboard_chart,
+    game_briefing,
+    briefing_expander,
+    arena_reveal,
+)
+from gtlab.ui.utils import ordinal
+from gtlab.concepts.stag_hunt.briefing import (
+    STORY, HOW_IT_WORKS, WHAT_TO_WATCH, WHY_IT_MATTERS, YOUR_JOB,
 )
 
 # ---------------------------------------------------------------------------
@@ -108,7 +124,7 @@ def _render_sh_nudge(event_key: str | None, progress: dict) -> None:
     if nudge_data is None:
         return
     if nudge_state == NudgeState.NEW:
-        st.info(f"**{nudge_data['headline']}**  \n{nudge_data['body']}")
+        result_banner("neutral", nudge_data["headline"], nudge_data["body"])
 
 
 def _render_sh_on_demand_nudge(event_key: str | None, progress: dict) -> None:
@@ -124,7 +140,7 @@ def _render_sh_on_demand_nudge(event_key: str | None, progress: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Standings renderer
+# Standings renderer — Altair leaderboard with YOU highlighted
 # ---------------------------------------------------------------------------
 
 
@@ -134,36 +150,60 @@ def _render_sh_standings(arena: SHArenaState) -> None:
         st.write("No standings yet.")
         return
 
+    # Mystery mask
+    mystery_mask: dict[str, str] = {}
+    if arena.mystery_mode:
+        letter = ord('A')
+        for idx, bot in enumerate(arena.bots):
+            if arena.opponent_display_names[idx] == "???":
+                mystery_mask[bot.name] = f"Opponent {chr(letter)}"
+            letter += 1
+
+    # Framer caption when human hasn't played
+    human_unplayed = any(r.get("unplayed") for r in rows)
+    if human_unplayed:
+        st.caption(
+            "These are the bots' scores from playing each other. "
+            "Your bar fills in as you complete matches."
+        )
+
+    # Build display + chart rows — ALL cells as strings
     display_rows = []
+    chart_rows = []
     for i, row in enumerate(rows, start=1):
-        label = row["name"] if not row["is_human"] else SH_HUMAN_LABEL
+        is_unplayed = row.get("unplayed", False)
+        if row["is_human"]:
+            label = SH_HUMAN_LABEL
+        else:
+            label = mystery_mask.get(row["name"], row["name"])
         display_rows.append({
-            "Rank": i,
+            "Rank": "—" if is_unplayed else str(i),
             "Player": label,
-            "Score": row["total_score"],
-            "Avg/Round": f"{row['mean_score']:.2f}" if row["total_rounds"] > 0 else "-",
-            "Matches": row["matches_played"] if not row["is_human"] else arena.player_matches_played,
+            "Score": "—" if is_unplayed else str(row["total_score"]),
+            "Avg/Round": "—" if is_unplayed else (
+                f"{row['mean_score']:.2f}" if row["total_rounds"] > 0 else "-"
+            ),
         })
+        chart_rows.append({
+            "name": label,
+            "score": 0 if is_unplayed else row["total_score"],
+        })
+
+    leaderboard_chart(chart_rows, highlight_name=SH_HUMAN_LABEL)
 
     df = pd.DataFrame(display_rows)
 
-    chart_data = pd.DataFrame({
-        "Player": [r["Player"] for r in display_rows],
-        "Score": [r["Score"] for r in display_rows],
-    }).set_index("Player")
-    st.bar_chart(chart_data, height=220, use_container_width=True)
-
     def highlight_human(row):
         if row["Player"] == SH_HUMAN_LABEL:
-            return ["background-color: #1a3a5c; font-weight: bold"] * len(row)
+            return ["background-color: #1E2C1A; font-weight: bold; color: #E6A23C"] * len(row)
         return [""] * len(row)
 
     styled = df.style.apply(highlight_human, axis=1)
-    st.dataframe(styled, use_container_width=True, hide_index=True)
+    st.dataframe(styled, width="stretch", hide_index=True)
 
 
 # ---------------------------------------------------------------------------
-# Sidebar — setup knobs (T7: noise, roster, mystery)
+# Sidebar — setup knobs (noise, roster, mystery)
 # ---------------------------------------------------------------------------
 
 
@@ -247,7 +287,7 @@ def _render_signal_phase(arena: SHArenaState, display_name: str) -> None:
         if st.button(
             "Announce: Stag",
             key="sh_btn_announce_stag",
-            use_container_width=True,
+            width="stretch",
             type="primary",
         ):
             result = submit_signal(arena, COOPERATE)
@@ -257,7 +297,7 @@ def _render_signal_phase(arena: SHArenaState, display_name: str) -> None:
         if st.button(
             "Announce: Hare",
             key="sh_btn_announce_hare",
-            use_container_width=True,
+            width="stretch",
         ):
             result = submit_signal(arena, DEFECT)
             st.session_state[_KEY_LAST_NUDGE] = None
@@ -296,7 +336,7 @@ def _render_commit_phase(arena: SHArenaState, display_name: str) -> dict | None:
         if st.button(
             "Hunt Stag",
             key="sh_btn_commit_stag",
-            use_container_width=True,
+            width="stretch",
             type="primary",
         ):
             result = commit_move(arena, COOPERATE)
@@ -304,7 +344,7 @@ def _render_commit_phase(arena: SHArenaState, display_name: str) -> dict | None:
         if st.button(
             "Hunt Hare",
             key="sh_btn_commit_hare",
-            use_container_width=True,
+            width="stretch",
         ):
             result = commit_move(arena, DEFECT)
 
@@ -358,21 +398,28 @@ def _render_current_match_panel(arena: SHArenaState, progress: dict) -> None:
     opp_idx = arena.current_opponent_idx
 
     if arena.run_complete:
-        st.success("Run complete! All opponents played.")
+        result_banner("win", "Run complete!", "All opponents played.")
         return
 
     display_name = arena.opponent_display_names[opp_idx]
     match_num = opp_idx + 1
     total_opponents = len(arena.bots)
 
-    st.subheader(f"Match {match_num} of {total_opponents}: vs. {display_name}")
+    section_title(f"Match {match_num} of {total_opponents}")
+    st.markdown(
+        f"<div style='font-size:1.1rem;font-weight:600;color:#E2E6EA;margin-bottom:0.4rem;'>"
+        f"vs. {display_name}</div>",
+        unsafe_allow_html=True,
+    )
 
     rounds_done = arena.rounds_this_match
     rounds_left = SH_MATCH_LENGTH - rounds_done
-    st.caption(
-        f"Round {rounds_done + 1} of {SH_MATCH_LENGTH} "
-        f"({rounds_left} left in this match)"
-    )
+
+    stat_pills_row([
+        ("Round", f"{rounds_done + 1}/{SH_MATCH_LENGTH}"),
+        ("Left", rounds_left),
+        ("Match score", f"You {arena.player_match_score} — {display_name} {arena.opp_match_score}"),
+    ])
 
     # Show last-round result if we have one
     if rounds_done > 0:
@@ -405,30 +452,122 @@ def _render_current_match_panel(arena: SHArenaState, progress: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Reveal body helper
+# ---------------------------------------------------------------------------
+
+
+def _make_sh_reveal_body(rows: list[dict]) -> str:
+    """Generate reveal text from final Stag Hunt standings."""
+    if not rows:
+        return ""
+
+    n = len(rows)
+    top_half = [r for r in rows[:max(1, n // 2)] if not r["is_human"]]
+    bottom_half = [r for r in rows[max(1, n // 2):] if not r["is_human"]]
+
+    top_bot = None
+    for r in rows:
+        if not r["is_human"]:
+            top_bot = r
+            break
+
+    top_names = {r["name"] for r in top_half}
+    bottom_names = {r["name"] for r in bottom_half}
+
+    sentences = []
+
+    if top_bot:
+        if top_bot["name"] == "Trusting":
+            sentences.append(
+                "Trusting finished near the top — unconditional cooperation "
+                "paid off when partners showed up, though it had no defense against those who didn't."
+            )
+        elif top_bot["name"] == "Bluffer":
+            sentences.append(
+                "Bluffer finished near the top — announcing Stag while hunting Hare "
+                "extracted gains from those who took the announcements at face value."
+            )
+        elif top_bot["name"] == "Mirror":
+            sentences.append(
+                f"{top_bot['name']} finished at the top — "
+                "copying what opponents actually did, round by round, kept it in sync with the field."
+            )
+        else:
+            sentences.append(
+                f"{top_bot['name']} finished at the top — "
+                "its approach to trust and announcements held up across the whole arena."
+            )
+
+    if "Bluffer" in bottom_names:
+        sentences.append(
+            "Bluffer sank in the final standings — "
+            "the gap between announcements and actions caught up with it over time."
+        )
+    elif "Bluffer" in top_names and top_bot and top_bot["name"] != "Bluffer":
+        sentences.append(
+            "Bluffer fared well — worth noticing what that says about "
+            "how much the field trusted announcements."
+        )
+
+    if "Trusting" in bottom_names:
+        sentences.append(
+            "Trusting finished low — cooperative to the end, "
+            "and consistently left empty-handed when partners didn't show up."
+        )
+
+    if "Cautious" in top_names:
+        sentences.append(
+            "Cautious stayed near the top by never risking the stag — "
+            "steady small payoffs added up."
+        )
+
+    if not sentences:
+        sentences.append(
+            "The standings reflect the full arc of every match — "
+            "not just who was cooperative, but whose approach to trust "
+            "held up when tested repeatedly."
+        )
+
+    return " ".join(sentences[:3])
+
+
+# ---------------------------------------------------------------------------
 # Post-run debrief
 # ---------------------------------------------------------------------------
 
 
 def _render_sh_debrief(arena: SHArenaState, progress: dict) -> None:
-    st.success("Run complete! Here's how the hunt went.")
-
     rows = compute_sh_standings(arena)
     your_rank = next((i + 1 for i, r in enumerate(rows) if r["is_human"]), len(rows))
     your_score = arena.player_total_score
+    total = len(rows)
 
-    st.write(
-        f"You finished **{_ordinal(your_rank)} out of {len(rows)}** "
-        f"with a total score of **{your_score}**."
-    )
+    if your_rank == 1:
+        kind = "win"
+        headline = f"Top of the table — {your_score} pts"
+    elif your_rank <= max(1, total // 2):
+        kind = "neutral"
+        headline = f"Finished {ordinal(your_rank)} of {total} — {your_score} pts"
+    else:
+        kind = "draw"
+        headline = f"Finished {ordinal(your_rank)} of {total} — {your_score} pts"
+
+    result_banner(kind, headline)
+
+    reveal_body = _make_sh_reveal_body(rows)
+    if reveal_body:
+        arena_reveal("What just happened in there", reveal_body)
 
     nudge_state = get_nudge_state(progress, SH_CONCEPT_KEY)
     exp = progress.get("concepts", {}).get(SH_CONCEPT_KEY, 0)
 
     if nudge_state == NudgeState.NEW:
-        st.info(
+        result_banner(
+            "neutral",
+            "Notice anything?",
             "Try turning on noise and notice how trust falls apart differently. "
             "Or add the Bluffer to the roster and watch what happens to announcements. "
-            "The same payoffs; very different dynamics."
+            "The same payoffs; very different dynamics.",
         )
     elif nudge_state == NudgeState.PROGRESSING:
         st.caption(
@@ -444,11 +583,6 @@ def _render_sh_debrief(arena: SHArenaState, progress: dict) -> None:
         st.rerun()
 
 
-def _ordinal(n: int) -> str:
-    suffixes = {1: "st", 2: "nd", 3: "rd"}
-    return f"{n}{suffixes.get(n if n <= 3 else 0, 'th')}"
-
-
 # ---------------------------------------------------------------------------
 # Public entry point — called by the shell
 # ---------------------------------------------------------------------------
@@ -461,6 +595,7 @@ def render() -> None:
     The shell owns page config and the back-to-menu control;
     this function owns everything Stag Hunt-specific.
     """
+    inject_theme()
     _init_session_state()
 
     # Load shared progress (owned by shell session state)
@@ -472,33 +607,32 @@ def render() -> None:
     selected_names, noise, mystery_mode = _render_sh_sidebar()
 
     # --- Main header ---
-    st.title("Stag Hunt")
-    st.caption(
-        "Hunting the stag together is the best outcome for everyone — "
-        "but only if you both show up. You can talk first. Trust is the question."
+    app_header(
+        "Stag Hunt",
+        "Two hunters, one choice — hunt together or go it alone. The announcement comes first. Trust is the question.",
     )
 
     arena: SHArenaState | None = st.session_state[_KEY_ARENA]
 
     # --- Setup / Start Run ---
     if arena is None:
-        st.write(
-            "Each round has two steps: first you and your opponent both announce "
-            "whether you'll hunt Stag or Hare. Then you both actually hunt. "
-            "The announcement is just words — it doesn't bind you to anything."
+        game_briefing(
+            story=STORY,
+            how_it_works=HOW_IT_WORKS,
+            what_to_watch=WHAT_TO_WATCH,
+            why_it_matters=WHY_IT_MATTERS,
+            your_job=YOUR_JOB,
         )
-        st.write(
-            "Mutual Stag is the best outcome for everyone. "
-            "But hunting Stag alone, while your partner plays it safe, "
-            "leaves you with nothing. The leaderboard updates as you play."
-        )
+
+        st.divider()
 
         nudge_state = get_nudge_state(progress, SH_CONCEPT_KEY)
         if nudge_state == NudgeState.NEW:
-            st.info(
-                "**First time here?** "
-                "Start with everyone in the roster and try trusting the announcements for a while. "
-                "Then try ignoring them. Notice what changes."
+            result_banner(
+                "neutral",
+                "Ready to step in?",
+                "Press Start and try trusting the announcements for a while. "
+                "Then try ignoring them. Notice what changes.",
             )
 
         col_start, _ = st.columns([1, 2])
@@ -506,7 +640,7 @@ def render() -> None:
             if st.button(
                 "Start hunt",
                 type="primary",
-                use_container_width=True,
+                width="stretch",
                 key="sh_start_run",
             ):
                 arena = init_sh_arena(selected_names, noise, mystery_mode)
@@ -524,20 +658,29 @@ def render() -> None:
     if arena.run_complete:
         left_col, right_col = st.columns([1, 1])
         with left_col:
+            section_title("Debrief")
             _render_sh_debrief(arena, progress)
         with right_col:
-            st.subheader("Final Standings")
+            section_title("Final Standings")
             _render_sh_standings(arena)
         return
 
     # --- Active run: live play ---
+    briefing_expander(
+        story=STORY,
+        how_it_works=HOW_IT_WORKS,
+        what_to_watch=WHAT_TO_WATCH,
+        why_it_matters=WHY_IT_MATTERS,
+        your_job=YOUR_JOB,
+    )
+
     left_col, right_col = st.columns([1, 1], gap="large")
 
     with left_col:
         _render_current_match_panel(arena, progress)
 
     with right_col:
-        st.subheader("Live Standings")
+        section_title("Live Standings")
         st.caption(
             "Bots hunt among themselves in the background; "
             "your score updates as you complete each match."

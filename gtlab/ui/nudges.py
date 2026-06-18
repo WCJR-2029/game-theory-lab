@@ -627,16 +627,21 @@ def classify_sch_round_event(
     is_focal_vs_logic: bool,
     player_pick: object,
     partner_pick: object,
+    consecutive_focal_matches: int = 0,
 ) -> str | None:
     """Classify the most salient Schelling nudge event for a just-resolved round.
 
     Priority order:
-      1. Focal-vs-logic match (highest teaching moment — salience beat logic)
-      2. Match (focal point convergence)
-      3. No match (divergence insight)
+      1. Convergence: 2nd+ consecutive focal match (salience-without-logic lesson)
+      2. Focal-vs-logic match (salience beat the clever answer)
+      3. Match (focal point convergence — first match)
+      4. No match (divergence insight)
     """
+    # 1. Convergence: recurring focal match (streak >= 2)
+    if matched and consecutive_focal_matches >= 2:
+        return SCH_NUDGE_CONVERGENCE
+
     if is_focal_vs_logic and matched:
-        # Wait — if they matched on the focal (not decoy), that's the wow moment
         return SCH_NUDGE_FOCAL_VS_LOGIC
     if matched:
         return SCH_NUDGE_FIRST_MATCH

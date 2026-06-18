@@ -1,5 +1,5 @@
 """
-Mixed Strategies concept view (Phase 6, T2-T4).
+Mixed Strategies concept view (Phase 6, T2-T4 + Refined Dark Lab rollout).
 
 Called by the Lab shell when the player selects "Matching Pennies & RPS" from the menu.
 
@@ -11,6 +11,13 @@ from __future__ import annotations
 
 import streamlit as st
 
+from gtlab.concepts.mixed_strategies.briefing import (
+    STORY,
+    HOW_IT_WORKS,
+    WHAT_TO_WATCH,
+    WHY_IT_MATTERS,
+    YOUR_JOB,
+)
 from gtlab.concepts.mixed_strategies.ms_loop import (
     MS_CONCEPT_KEY,
     MSArenaState,
@@ -18,7 +25,7 @@ from gtlab.concepts.mixed_strategies.ms_loop import (
     init_ms_arena,
     play_ms_round,
 )
-from gtlab.concepts.mixed_strategies.opponents import OPPONENTS
+from gtlab.concepts.mixed_strategies.opponents import OPPONENTS, PerfectRandomizer
 from gtlab.ui.nudges import (
     MS_NUDGE_ROUND_START,
     classify_ms_round_event,
@@ -31,6 +38,16 @@ from gtlab.ui.progress import (
     load_progress,
     save_progress,
 )
+from gtlab.ui.theme import (
+    app_header,
+    arena_reveal,
+    briefing_expander,
+    game_briefing,
+    inject_theme,
+    result_banner,
+    section_title,
+    stat_pills_row,
+)
 
 # ---------------------------------------------------------------------------
 # Session-state key constants
@@ -39,10 +56,11 @@ from gtlab.ui.progress import (
 _KEY_ARENA = "mp_arena"
 _KEY_SHOW_SETUP = "mp_show_setup"
 _KEY_AWAITING_REVEAL = "mp_awaiting_reveal"
-_KEY_GAME_NAME = "mp_game_name"
-_KEY_OPPONENT_NAME = "mp_opponent_name"
-_KEY_MEMORY_DEPTH = "mp_memory_depth"
-_KEY_MYSTERY_MODE = "mp_mystery_mode"
+_KEY_PROGRESS = "mp_progress"
+
+# Note: mp_game_name / mp_opponent_name / mp_mystery_mode were write-only state
+# (never read back from session_state — the sidebar widgets are the source of
+# truth). Removed to keep state clean.
 
 
 # ---------------------------------------------------------------------------
@@ -57,14 +75,11 @@ def _init_session_state() -> None:
         st.session_state[_KEY_SHOW_SETUP] = True
     if _KEY_AWAITING_REVEAL not in st.session_state:
         st.session_state[_KEY_AWAITING_REVEAL] = False
-    if _KEY_GAME_NAME not in st.session_state:
-        st.session_state[_KEY_GAME_NAME] = "Matching Pennies"
-    if _KEY_OPPONENT_NAME not in st.session_state:
-        st.session_state[_KEY_OPPONENT_NAME] = OPPONENTS[0].name
-    if _KEY_MEMORY_DEPTH not in st.session_state:
-        st.session_state[_KEY_MEMORY_DEPTH] = 2
-    if _KEY_MYSTERY_MODE not in st.session_state:
-        st.session_state[_KEY_MYSTERY_MODE] = False
+    if "mp_memory_depth" not in st.session_state:
+        st.session_state["mp_memory_depth"] = 2
+    # Cache progress in session state — avoid disk I/O on every rerun
+    if _KEY_PROGRESS not in st.session_state:
+        st.session_state[_KEY_PROGRESS] = load_progress()
 
 
 # ---------------------------------------------------------------------------
@@ -148,7 +163,7 @@ def _render_ms_nudge(event_key: str | None, progress: dict) -> None:
     if nudge_data is None:
         return
     if nudge_state == NudgeState.NEW:
-        st.info(f"**{nudge_data['headline']}**  \n{nudge_data['body']}")
+        result_banner("neutral", nudge_data["headline"], nudge_data["body"])
 
 
 def _render_ms_on_demand_nudge(event_key: str | None, progress: dict) -> None:
@@ -175,96 +190,140 @@ def _render_setup_screen(
     mystery_mode: bool,
     progress: dict,
 ) -> None:
-    """Render the game setup / entry screen.
+    """Render the game setup / entry screen."""
+    app_header(
+        title="Matching Pennies & RPS",
+        subtitle=(
+            "You and an opponent, move by move. "
+            "Any pattern you fall into can be read — and punished."
+        ),
+    )
 
-    Parameters are passed in from the sidebar values so no duplicate widget keys
-    are created between the sidebar and the main area.
-    """
-    st.title("Matching Pennies & RPS")
-    st.caption(
-        "You and an opponent, move by move. There's no good fixed play - "
-        "any pattern you fall into gets read and punished. "
-        "The only safe strategy is genuine randomness. "
-        "Which turns out to be harder than it sounds."
+    # Onboarding briefing — full four-section panel
+    game_briefing(
+        story=STORY,
+        how_it_works=HOW_IT_WORKS,
+        what_to_watch=WHAT_TO_WATCH,
+        why_it_matters=WHY_IT_MATTERS,
+        your_job=YOUR_JOB,
     )
 
     nudge_state = get_nudge_state(progress, MS_CONCEPT_KEY)
     if nudge_state == NudgeState.NEW:
-        st.info(
-            "**How this works:** Each round you pick a move. The opponent tries to "
-            "predict which one you'll pick - then plays the best counter. "
-            "If you fall into a pattern, it'll exploit it. "
-            "Play a few rounds and notice how readable you are."
+        result_banner(
+            "neutral",
+            "Ready to step in?",
+            "Press Start and pick your moves. "
+            "Watch the readout on the right — it shows how readable you are "
+            "round by round.",
         )
-
-    # Display the current selections (read-only summary - controls live in sidebar)
-    st.write(f"**Game:** {game_name}")
-    st.write(f"**Opponent:** {opponent_name}")
-
-    # Show opponent description
-    if opponent_name != _ROTATING_NAME:
-        from gtlab.concepts.mixed_strategies.opponents import OPPONENT_BY_NAME
-        if opponent_name == "Pattern Reader":
-            st.caption("Watches the rhythm of your last few moves and steps right in front of your next one.")
-        elif opponent_name in OPPONENT_BY_NAME:
-            st.caption(OPPONENT_BY_NAME[opponent_name].description)
-    else:
-        st.caption("Cycles through all opponents in order, round by round.")
-
-    st.caption("Use the sidebar to change game or opponent.")
 
     st.divider()
-    if st.button("Start", key="mp_start_btn", type="primary"):
-        arena = init_ms_arena(
-            game_name=game_name,
-            opponent_name=opponent_name,
-            memory_depth=memory_depth,
-            mystery_mode=mystery_mode,
-        )
-        st.session_state[_KEY_ARENA] = arena
-        st.session_state[_KEY_SHOW_SETUP] = False
-        st.session_state[_KEY_AWAITING_REVEAL] = False
-        st.rerun()
+    section_title("Current setup")
+
+    # Lab-card summary of the current selections
+    from gtlab.concepts.mixed_strategies.opponents import OPPONENT_BY_NAME
+    if opponent_name != _ROTATING_NAME:
+        if opponent_name == "Pattern Reader":
+            opp_desc = "Watches the rhythm of your last few moves and steps right in front of your next one."
+        elif opponent_name in OPPONENT_BY_NAME:
+            opp_desc = OPPONENT_BY_NAME[opponent_name].description
+        else:
+            opp_desc = ""
+    else:
+        opp_desc = "Cycles through all opponents in order, round by round."
+
+    st.markdown(
+        f"""
+<div class="lab-card" style="max-width:40rem;">
+  <div style="font-size:0.75rem;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;
+              color:#8B9299;margin-bottom:0.5rem;">Selected</div>
+  <div style="display:flex;gap:2rem;flex-wrap:wrap;">
+    <div>
+      <div style="font-size:0.72rem;color:#8B9299;margin-bottom:0.1rem;">Game</div>
+      <div style="font-size:1rem;font-weight:600;color:#E2E6EA;">{game_name}</div>
+    </div>
+    <div>
+      <div style="font-size:0.72rem;color:#8B9299;margin-bottom:0.1rem;">Opponent</div>
+      <div style="font-size:1rem;font-weight:600;color:#E6A23C;">{opponent_name}</div>
+    </div>
+  </div>
+  <div style="font-size:0.85rem;color:#8B9299;margin-top:0.5rem;line-height:1.5;">
+    {opp_desc}
+  </div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
+    st.caption("Use the sidebar to change game or opponent.")
+
+    col_start, _ = st.columns([1, 2])
+    with col_start:
+        if st.button("Start", key="mp_start_btn", type="primary", width="stretch"):
+            arena = init_ms_arena(
+                game_name=game_name,
+                opponent_name=opponent_name,
+                memory_depth=memory_depth,
+                mystery_mode=mystery_mode,
+            )
+            st.session_state[_KEY_ARENA] = arena
+            st.session_state[_KEY_SHOW_SETUP] = False
+            st.session_state[_KEY_AWAITING_REVEAL] = False
+            st.rerun()
 
 
 # ---------------------------------------------------------------------------
-# Live predictability readout (right column)
+# Live predictability readout (right column) — CENTERPIECE
 # ---------------------------------------------------------------------------
 
 
 def _render_predictability_readout(arena: MSArenaState) -> None:
     """Render the live predictability readout panel."""
-    st.subheader("How readable are you?")
+    section_title("How readable are you?")
 
     if arena.metrics.total_rounds == 0:
-        st.caption("Play a round to see your patterns emerge.")
+        st.markdown(
+            '<div class="lab-card" style="max-width:24rem;">'
+            '<span style="color:#8B9299;font-size:0.88rem;">Play a round to see your patterns emerge.</span>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
         return
 
-    # Move frequency balance
-    st.write("**Move distribution**")
+    # Move distribution — styled lab-card
+    stat_pills_row([
+        (move, f"{int(arena.metrics.move_frequency(move) * 100)}%")
+        for move in arena.game.moves
+    ])
+
+    # Progress bars for each move
     for move in arena.game.moves:
         freq = arena.metrics.move_frequency(move)
-        pct = int(freq * 100)
-        st.write(f"{move}: {pct}%")
-        st.progress(freq)
+        st.progress(freq, text=f"{move}: {int(freq * 100)}%")
 
-    # Streak info
+    # Streak info in a card
     streak = arena.metrics.current_streak
     longest = arena.metrics.longest_streak
-    st.write(f"**Current streak:** {streak}")
+    streak_note = ""
     if streak >= 3:
-        st.caption("Three in a row... that's a pattern an opponent can exploit.")
-    st.write(f"**Longest streak:** {longest}")
+        streak_note = " — that's a pattern a reader can exploit."
+    elif streak >= 2:
+        streak_note = " — getting repetitive."
 
-    # Hit rate
-    st.write("**Opponent prediction accuracy**")
-    from gtlab.concepts.mixed_strategies.opponents import PerfectRandomizer
+    stat_pills_row([
+        ("Current streak", streak),
+        ("Longest streak", longest),
+    ])
+    if streak_note:
+        st.caption(f"Three in a row{streak_note}")
+
+    # Opponent prediction accuracy
+    section_title("Prediction accuracy")
     if isinstance(arena.opponent, PerfectRandomizer) and not arena.rotating:
-        st.caption("(Pure random - no predictions)")
+        st.caption("Pure random opponent — no predictions made.")
     elif arena.metrics.total_rounds < 5:
-        st.caption("Gathering data... (need 5+ rounds)")
+        st.caption("Gathering data... (5+ rounds needed)")
     else:
-        # For rotating, show aggregate or skip
         if arena.rotating:
             st.caption("Multiple opponents - see individual rates below.")
         else:
@@ -272,11 +331,50 @@ def _render_predictability_readout(arena: MSArenaState) -> None:
             if hr is None:
                 st.caption("No predictions made yet.")
             else:
-                st.write(f"Predicted you correctly: **{int(hr * 100)}%**")
+                hit_pct = int(hr * 100)
                 if hr >= 0.55:
-                    st.caption("They're reading you well.")
+                    kind = "lose"
+                    label = "Reading you well"
                 elif hr <= 0.40:
-                    st.caption("You're keeping them guessing.")
+                    kind = "win"
+                    label = "Keeping them guessing"
+                else:
+                    kind = "draw"
+                    label = "Roughly even"
+                result_banner(
+                    kind,
+                    f"{label} — predicted correctly {hit_pct}% of the time",
+                )
+
+
+# ---------------------------------------------------------------------------
+# Move buttons
+# ---------------------------------------------------------------------------
+
+
+def _render_move_buttons(arena: MSArenaState) -> str | None:
+    """Render styled move buttons for the current game. Returns move name or None."""
+    section_title("Pick your move")
+    if arena.game.name == "Matching Pennies":
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Heads", key="mp_btn_Heads", type="primary", width="stretch"):
+                return "Heads"
+        with col2:
+            if st.button("Tails", key="mp_btn_Tails", width="stretch"):
+                return "Tails"
+    else:
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            if st.button("Rock", key="mp_btn_Rock", type="primary", width="stretch"):
+                return "Rock"
+        with col2:
+            if st.button("Paper", key="mp_btn_Paper", width="stretch"):
+                return "Paper"
+        with col3:
+            if st.button("Scissors", key="mp_btn_Scissors", width="stretch"):
+                return "Scissors"
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -286,57 +384,56 @@ def _render_predictability_readout(arena: MSArenaState) -> None:
 
 def _render_active_round(arena: MSArenaState, progress: dict) -> None:
     """Render the move-selection screen for the current round."""
+    # Briefing expander — always one click away
+    briefing_expander(
+        story=STORY,
+        how_it_works=HOW_IT_WORKS,
+        what_to_watch=WHAT_TO_WATCH,
+        why_it_matters=WHY_IT_MATTERS,
+        your_job=YOUR_JOB,
+    )
+
     # Score row
-    col_w, col_l, col_d = st.columns(3)
-    with col_w:
-        st.metric("Wins", arena.wins)
-    with col_l:
-        st.metric("Losses", arena.losses)
-    with col_d:
-        st.metric("Draws", arena.draws)
+    stat_pills_row([
+        ("Wins", arena.wins),
+        ("Losses", arena.losses),
+        ("Draws", arena.draws),
+        ("Rounds", arena.metrics.total_rounds),
+    ])
 
     round_num = arena.metrics.total_rounds + 1
-    st.write(f"**Round {round_num}**")
+    section_title(f"Round {round_num}")
 
-    # Opponent label
+    # Opponent label card
     if not arena.mystery_mode:
         if arena.rotating:
             idx = len(arena.round_history) % len(OPPONENTS)
             opp_name = OPPONENTS[idx].name
-            st.caption(f"Opponent this round: {opp_name} (rotating)")
+            opp_label = f"{opp_name} (rotating)"
         else:
-            st.caption(f"Opponent: {arena.opponent.name}")
+            opp_label = arena.opponent.name
     else:
-        st.caption("Opponent: ???")
+        opp_label = "???"
 
-    left_col, right_col = st.columns([3, 2])
+    st.markdown(
+        f'<div style="font-size:1rem;font-weight:600;color:#E2E6EA;margin-bottom:0.5rem;">'
+        f'vs. <span style="color:#E6A23C;">{opp_label}</span></div>',
+        unsafe_allow_html=True,
+    )
+
+    left_col, right_col = st.columns([3, 2], gap="large")
 
     with left_col:
-        st.write("**Pick your move:**")
-        if arena.game.name == "Matching Pennies":
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("Heads", key="mp_btn_Heads", use_container_width=True):
-                    _handle_move(arena, "Heads", progress)
-            with col2:
-                if st.button("Tails", key="mp_btn_Tails", use_container_width=True):
-                    _handle_move(arena, "Tails", progress)
-        else:
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                if st.button("Rock", key="mp_btn_Rock", use_container_width=True):
-                    _handle_move(arena, "Rock", progress)
-            with col2:
-                if st.button("Paper", key="mp_btn_Paper", use_container_width=True):
-                    _handle_move(arena, "Paper", progress)
-            with col3:
-                if st.button("Scissors", key="mp_btn_Scissors", use_container_width=True):
-                    _handle_move(arena, "Scissors", progress)
+        # Move buttons (styled)
+        move_chosen = _render_move_buttons(arena)
+
+        if move_chosen is not None:
+            _handle_move(arena, move_chosen, progress)
 
         # Finish session button (after 5+ rounds)
         if arena.metrics.total_rounds >= 5:
             st.divider()
-            if st.button("Finish session", key="mp_btn_finish", type="secondary"):
+            if st.button("Finish session", key="mp_btn_finish", width="stretch"):
                 _finish_session(arena, progress)
                 st.rerun()
 
@@ -344,11 +441,13 @@ def _render_active_round(arena: MSArenaState, progress: dict) -> None:
         _render_predictability_readout(arena)
 
     st.divider()
-    if st.button("Start over", key="mp_start_over", type="secondary"):
-        st.session_state[_KEY_ARENA] = None
-        st.session_state[_KEY_SHOW_SETUP] = True
-        st.session_state[_KEY_AWAITING_REVEAL] = False
-        st.rerun()
+    col_reset, _ = st.columns([1, 4])
+    with col_reset:
+        if st.button("Start over", key="mp_start_over", width="stretch"):
+            st.session_state[_KEY_ARENA] = None
+            st.session_state[_KEY_SHOW_SETUP] = True
+            st.session_state[_KEY_AWAITING_REVEAL] = False
+            st.rerun()
 
 
 def _handle_move(arena: MSArenaState, move: str, progress: dict) -> None:
@@ -364,6 +463,8 @@ def _finish_session(arena: MSArenaState, progress: dict) -> None:
     arena.session_complete = True
     increment_experience(progress, MS_CONCEPT_KEY, 1)
     save_progress(progress)
+    # Update the cached progress
+    st.session_state[_KEY_PROGRESS] = progress
 
 
 # ---------------------------------------------------------------------------
@@ -377,21 +478,34 @@ def _render_reveal(arena: MSArenaState, progress: dict) -> None:
     if record is None:
         return
 
+    # Briefing expander stays available
+    briefing_expander(
+        story=STORY,
+        how_it_works=HOW_IT_WORKS,
+        what_to_watch=WHAT_TO_WATCH,
+        why_it_matters=WHY_IT_MATTERS,
+        your_job=YOUR_JOB,
+    )
+
     # Score row
-    col_w, col_l, col_d = st.columns(3)
-    with col_w:
-        st.metric("Wins", arena.wins)
-    with col_l:
-        st.metric("Losses", arena.losses)
-    with col_d:
-        st.metric("Draws", arena.draws)
+    stat_pills_row([
+        ("Wins", arena.wins),
+        ("Losses", arena.losses),
+        ("Draws", arena.draws),
+        ("Rounds", arena.metrics.total_rounds),
+    ])
 
     st.divider()
 
     # Moves reveal
     col_you, col_them = st.columns(2)
     with col_you:
-        st.write(f"**You played:** {record.human_move}")
+        st.markdown(
+            f'<div style="font-size:0.78rem;font-weight:600;letter-spacing:0.07em;'
+            f'text-transform:uppercase;color:#8B9299;margin-bottom:0.25rem;">You played</div>'
+            f'<div style="font-size:1.5rem;font-weight:700;color:#E2E6EA;">{record.human_move}</div>',
+            unsafe_allow_html=True,
+        )
     with col_them:
         if not arena.mystery_mode:
             if arena.rotating:
@@ -399,17 +513,22 @@ def _render_reveal(arena: MSArenaState, progress: dict) -> None:
                 opp_name = OPPONENTS[idx].name
             else:
                 opp_name = arena.opponent.name
-            st.write(f"**{opp_name} played:** {record.opponent_move}")
         else:
-            st.write(f"**??? played:** {record.opponent_move}")
+            opp_name = "???"
+        st.markdown(
+            f'<div style="font-size:0.78rem;font-weight:600;letter-spacing:0.07em;'
+            f'text-transform:uppercase;color:#8B9299;margin-bottom:0.25rem;">{opp_name} played</div>'
+            f'<div style="font-size:1.5rem;font-weight:700;color:#E6A23C;">{record.opponent_move}</div>',
+            unsafe_allow_html=True,
+        )
 
-    # Outcome
+    # Outcome banner
     if record.outcome == 1:
-        st.success("You win this round!")
+        result_banner("win", "You win this round!")
     elif record.outcome == -1:
-        st.error("You lose this round.")
+        result_banner("lose", "You lose this round.")
     else:
-        st.info("Draw.")
+        result_banner("draw", "Draw.")
 
     # Nudge
     _render_ms_nudge(arena.last_nudge_event, progress)
@@ -423,11 +542,11 @@ def _render_reveal(arena: MSArenaState, progress: dict) -> None:
     st.divider()
     col_next, col_over = st.columns(2)
     with col_next:
-        if st.button("Next round", key="mp_btn_next_round", type="primary"):
+        if st.button("Next round", key="mp_btn_next_round", type="primary", width="stretch"):
             st.session_state[_KEY_AWAITING_REVEAL] = False
             st.rerun()
     with col_over:
-        if st.button("Start over", key="mp_start_over", type="secondary"):
+        if st.button("Start over", key="mp_start_over", width="stretch"):
             st.session_state[_KEY_ARENA] = None
             st.session_state[_KEY_SHOW_SETUP] = True
             st.session_state[_KEY_AWAITING_REVEAL] = False
@@ -435,46 +554,147 @@ def _render_reveal(arena: MSArenaState, progress: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Session complete screen
+# Session complete screen — with arena_reveal
 # ---------------------------------------------------------------------------
 
 
-def _render_session_complete(arena: MSArenaState) -> None:
+def _make_reveal_body(arena: MSArenaState) -> str:
+    """Generate a session-keyed reveal body from what actually happened."""
+    total = arena.metrics.total_rounds
+    wins = arena.wins
+    losses = arena.losses
+    draws = arena.draws
+
+    # Was the opponent a Perfect Randomizer?
+    is_randomizer = (
+        not arena.rotating and isinstance(arena.opponent, PerfectRandomizer)
+    )
+
+    sentences = []
+
+    if is_randomizer:
+        # Honesty: never imply the player could beat it
+        win_pct = int((wins / total) * 100) if total > 0 else 0
+        sentences.append(
+            f"You played {total} rounds against the Perfect Randomizer and won "
+            f"{win_pct}% of them — which is about what you'd expect from a "
+            "completely unpredictable opponent."
+        )
+        sentences.append(
+            "There's nothing to read in a truly random sequence. "
+            "The Randomizer held roughly even because it never made a prediction — "
+            "and never had a pattern to exploit in itself."
+        )
+    else:
+        # How predictable were they?
+        longest = arena.metrics.longest_streak
+        # Find the most-played move
+        if arena.metrics.move_counts:
+            most_played = max(arena.metrics.move_counts, key=arena.metrics.move_counts.get)
+            most_freq = arena.metrics.move_frequency(most_played)
+        else:
+            most_played = None
+            most_freq = 0.0
+
+        if longest >= 4:
+            sentences.append(
+                f"A streak of {longest} identical moves in a row gave the opponent "
+                "a clear window — that's the kind of pattern a reader waits for."
+            )
+        elif longest >= 2:
+            sentences.append(
+                f"The longest streak here was {longest} — "
+                "just long enough for a pattern reader to start leaning in."
+            )
+
+        if most_played is not None and most_freq > 0.55:
+            sentences.append(
+                f"{most_played} appeared in {int(most_freq * 100)}% of rounds — "
+                "a frequency imbalance the opponent could exploit by leaning toward "
+                "the counter for it."
+            )
+
+        # Outcome summary
+        if wins > losses:
+            sentences.append(
+                f"You came out ahead this session ({wins}W {losses}L "
+                f"{draws}D over {total} rounds) — "
+                "though the interesting question is whether that reflects genuine "
+                "unpredictability or just favourable match-up."
+            )
+        elif losses > wins:
+            sentences.append(
+                f"The opponent got the better of it this session ({wins}W {losses}L "
+                f"{draws}D over {total} rounds). "
+                "The readout shows where the patterns showed up."
+            )
+        else:
+            sentences.append(
+                f"A split session: {wins}W {losses}L {draws}D over {total} rounds. "
+                "The readout tells the real story."
+            )
+
+    if not sentences:
+        sentences.append(
+            "The readout recorded what happened — the balance of moves, "
+            "any streaks, and how often the opponent called the next one correctly."
+        )
+
+    return " ".join(sentences[:3])
+
+
+def _render_session_complete(arena: MSArenaState, progress: dict) -> None:
     """Render the end-of-session debrief."""
-    st.title("Session complete")
+    app_header(
+        title="Session complete",
+        subtitle="Here's what the readout showed.",
+    )
 
     total = arena.metrics.total_rounds
-    st.write(f"You played **{total} rounds**.")
-
-    col_w, col_l, col_d = st.columns(3)
-    with col_w:
-        st.metric("Wins", arena.wins)
-    with col_l:
-        st.metric("Losses", arena.losses)
-    with col_d:
-        st.metric("Draws", arena.draws)
+    stat_pills_row([
+        ("Rounds", total),
+        ("Wins", arena.wins),
+        ("Losses", arena.losses),
+        ("Draws", arena.draws),
+    ])
 
     st.divider()
-    st.write("**Your move distribution:**")
+
+    section_title("Move distribution")
     for move in arena.game.moves:
         freq = arena.metrics.move_frequency(move)
-        st.write(f"{move}: {int(freq * 100)}%")
-        st.progress(freq)
+        st.progress(freq, text=f"{move}: {int(freq * 100)}%")
 
     if arena.metrics.longest_streak >= 3:
-        st.info(
-            f"Your longest streak was **{arena.metrics.longest_streak}** "
-            "consecutive identical moves - the kind of pattern opponents can predict."
+        result_banner(
+            "neutral",
+            f"Longest streak: {arena.metrics.longest_streak} identical moves in a row",
+            "The kind of pattern an opponent that reads sequences can step in front of.",
         )
 
     st.divider()
-    st.info(
-        "**The lesson:** Genuine randomness is the only unexploitable strategy. "
-        "Humans resist true randomness - we have rhythms, habits, and patterns. "
-        "That's exactly what pattern-reading opponents look for."
-    )
 
-    if st.button("Play again", key="mp_play_again", type="primary"):
+    # Arena reveal — the 'play -> feel -> reveal' closer
+    reveal_body = _make_reveal_body(arena)
+    arena_reveal("What the session showed", reveal_body)
+
+    nudge_state = get_nudge_state(progress, MS_CONCEPT_KEY)
+    exp = progress.get("concepts", {}).get(MS_CONCEPT_KEY, 0)
+    if nudge_state == NudgeState.NEW:
+        result_banner(
+            "neutral",
+            "Notice anything?",
+            "Try the same opponent again and deliberately vary your moves. "
+            "Then try the Perfect Randomizer and notice what that feels like.",
+        )
+    elif nudge_state == NudgeState.PROGRESSING:
+        st.caption(
+            f"({exp} session{'s' if exp != 1 else ''} completed. "
+            "Try switching opponents or games and see how the readout changes.)"
+        )
+
+    st.divider()
+    if st.button("Play again", key="mp_play_again", type="primary", width="stretch"):
         st.session_state[_KEY_ARENA] = None
         st.session_state[_KEY_SHOW_SETUP] = True
         st.session_state[_KEY_AWAITING_REVEAL] = False
@@ -488,17 +708,20 @@ def _render_session_complete(arena: MSArenaState) -> None:
 
 def render() -> None:
     """Entry point called by the Lab shell for the Mixed Strategies concept."""
+    inject_theme()
     _init_session_state()
 
     # Render sidebar knobs
     game_name, opponent_name, memory_depth, mystery_mode = _render_ms_sidebar()
 
-    progress = load_progress()
+    # Use cached progress from session state (avoid disk I/O on every rerun)
+    progress = st.session_state[_KEY_PROGRESS]
+
     arena: MSArenaState | None = st.session_state[_KEY_ARENA]
 
     # Session complete
     if arena is not None and arena.session_complete:
-        _render_session_complete(arena)
+        _render_session_complete(arena, progress)
         return
 
     # Setup screen
@@ -506,7 +729,7 @@ def render() -> None:
         _render_setup_screen(game_name, opponent_name, memory_depth, mystery_mode, progress)
         return
 
-    # Reveal screen
+    # Reveal screen (after a round is played)
     if st.session_state[_KEY_AWAITING_REVEAL]:
         _render_reveal(arena, progress)
         return

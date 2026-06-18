@@ -1,5 +1,5 @@
 """
-Ultimatum & Dictator concept view (Phase 5, T2–T4).
+Ultimatum & Dictator concept view (Phase 5, T2-T4).
 
 Called by the Lab shell when the player selects "Ultimatum & Dictator" from the menu.
 
@@ -18,10 +18,16 @@ from __future__ import annotations
 
 import streamlit as st
 
+from gtlab.concepts.ultimatum.briefing import (
+    STORY,
+    HOW_IT_WORKS,
+    WHAT_TO_WATCH,
+    WHY_IT_MATTERS,
+    YOUR_JOB,
+)
 from gtlab.concepts.ultimatum.ult_loop import (
     ULTArenaState,
     ULT_CONCEPT_KEY,
-    ULT_HUMAN_LABEL,
     ULT_STAKE_OPTIONS,
     ULT_DEFAULT_STAKE,
     ULT_SESSION_LENGTH,
@@ -50,6 +56,16 @@ from gtlab.ui.progress import (
     increment_experience,
     get_nudge_state,
     NudgeState,
+)
+from gtlab.ui.theme import (
+    inject_theme,
+    app_header,
+    section_title,
+    result_banner,
+    stat_pills_row,
+    game_briefing,
+    briefing_expander,
+    arena_reveal,
 )
 
 # ---------------------------------------------------------------------------
@@ -92,7 +108,7 @@ def _render_ult_nudge(event_key: str | None, progress: dict) -> None:
     if nudge_data is None:
         return
     if nudge_state == NudgeState.NEW:
-        st.info(f"**{nudge_data['headline']}**  \n{nudge_data['body']}")
+        result_banner("neutral", nudge_data["headline"], nudge_data["body"])
 
 
 def _render_ult_on_demand_nudge(event_key: str | None, progress: dict) -> None:
@@ -211,15 +227,16 @@ def _render_ult_sidebar() -> tuple[list[str], list[str], int, bool, bool]:
 def _render_score(arena: ULTArenaState) -> None:
     """Show running session score and round count."""
     rounds_done = arena.round_idx
-    rounds_left = max(0, ULT_SESSION_LENGTH - rounds_done)
-    col_score, col_rounds = st.columns(2)
-    with col_score:
-        st.metric("Your total", f"{arena.player_total:,} tokens")
-    with col_rounds:
-        if arena.session_complete:
-            st.metric("Rounds", f"{rounds_done} / {ULT_SESSION_LENGTH} — done")
-        else:
-            st.metric("Round", f"{rounds_done + 1} / {ULT_SESSION_LENGTH}")
+    label = "Rounds" if arena.session_complete else "Round"
+    round_val = (
+        f"{rounds_done} / {ULT_SESSION_LENGTH} — done"
+        if arena.session_complete
+        else f"{rounds_done + 1} / {ULT_SESSION_LENGTH}"
+    )
+    stat_pills_row([
+        ("Your total", f"{arena.player_total:,} tokens"),
+        (label, round_val),
+    ])
 
 
 # ---------------------------------------------------------------------------
@@ -240,10 +257,11 @@ def _render_outcome(arena: ULTArenaState) -> None:
     st.divider()
 
     if dictator:
-        st.subheader("Dictator round — the offer stood.")
-        st.write(
-            f"They offered you **{offer.responder_share:,}** out of "
-            f"**{offer.prize:,}** tokens. You had no veto. You received it."
+        result_banner(
+            "neutral",
+            "Dictator round — the offer stood.",
+            f"They offered you {offer.responder_share:,} out of "
+            f"{offer.prize:,} tokens. You had no veto. You received it.",
         )
         col_you, col_them = st.columns(2)
         with col_you:
@@ -253,19 +271,19 @@ def _render_outcome(arena: ULTArenaState) -> None:
         return
 
     if role == ROLE_PROPOSER:
+        pct = f"{offer.responder_fraction:.0%}"
         if result.accepted:
-            st.success("Accepted. The split stands.")
-            st.write(
-                f"You offered **{offer.responder_share:,}** out of "
-                f"**{offer.prize:,}** tokens — that's "
-                f"{offer.responder_fraction:.0%} for them."
+            result_banner(
+                "win",
+                "Accepted — the split stands.",
+                f"You offered {offer.responder_share:,} of {offer.prize:,} tokens ({pct}).",
             )
         else:
-            st.error("Rejected. Both sides walk away with nothing.")
-            st.write(
-                f"You offered **{offer.responder_share:,}** out of "
-                f"**{offer.prize:,}** tokens ({offer.responder_fraction:.0%}). "
-                "They decided that wasn't enough — and they'd rather burn it."
+            result_banner(
+                "lose",
+                "Rejected — both walk away with nothing.",
+                f"You offered {offer.responder_share:,} of {offer.prize:,} tokens ({pct}). "
+                "They decided that wasn't enough — and they'd rather burn it.",
             )
         col_you, col_them = st.columns(2)
         with col_you:
@@ -274,18 +292,19 @@ def _render_outcome(arena: ULTArenaState) -> None:
             st.metric("They received", f"{result.responder_payoff:,}")
 
     else:  # ROLE_RESPONDER (Ultimatum)
+        pct = f"{offer.responder_fraction:.0%}"
         if result.accepted:
-            st.success("You accepted.")
-            st.write(
-                f"They offered you **{offer.responder_share:,}** out of "
-                f"**{offer.prize:,}** tokens ({offer.responder_fraction:.0%}). You took it."
+            result_banner(
+                "win",
+                "You accepted.",
+                f"They offered you {offer.responder_share:,} of {offer.prize:,} tokens ({pct}).",
             )
         else:
-            st.error("You rejected. Both sides get nothing.")
-            st.write(
-                f"They offered you **{offer.responder_share:,}** out of "
-                f"**{offer.prize:,}** tokens ({offer.responder_fraction:.0%}). "
-                "You decided that wasn't worth accepting."
+            result_banner(
+                "lose",
+                "You rejected — both get nothing.",
+                f"They offered you {offer.responder_share:,} of {offer.prize:,} tokens ({pct}). "
+                "You decided that wasn't worth accepting.",
             )
         col_you, col_them = st.columns(2)
         with col_you:
@@ -335,7 +354,7 @@ def _render_proposer_panel(arena: ULTArenaState, opp_display: str) -> None:
             "Make this offer",
             key="ult_btn_propose",
             type="primary",
-            use_container_width=True,
+            width="stretch",
         ):
             play_proposer_round(arena, offer_to_them)
             st.session_state[_KEY_AWAITING_NEXT] = True
@@ -378,7 +397,7 @@ def _render_responder_panel(arena: ULTArenaState, opp_display: str) -> None:
             "Accept",
             key="ult_btn_accept",
             type="primary",
-            use_container_width=True,
+            width="stretch",
         ):
             play_responder_round(arena, player_accepts=True)
             st.session_state[_KEY_AWAITING_NEXT] = True
@@ -387,7 +406,7 @@ def _render_responder_panel(arena: ULTArenaState, opp_display: str) -> None:
         if st.button(
             "Reject",
             key="ult_btn_reject",
-            use_container_width=True,
+            width="stretch",
         ):
             play_responder_round(arena, player_accepts=False)
             st.session_state[_KEY_AWAITING_NEXT] = True
@@ -408,12 +427,10 @@ def _render_dictator_panel(arena: ULTArenaState, opp_display: str) -> None:
         return
 
     prize = offer.prize
-    st.warning(
-        f"**Dictator round** — {opp_display} decides the split. You have no veto."
-    )
-    st.caption(
-        "In Dictator mode the proposer's offer simply stands. "
-        "There's no threat of rejection — just a choice about what to give."
+    result_banner(
+        "neutral",
+        f"Dictator round — {opp_display} decides the split. You have no veto.",
+        "The proposer's offer simply stands. There's no threat of rejection — just a choice about what to give.",
     )
 
     col_offer, col_keep = st.columns(2)
@@ -431,7 +448,7 @@ def _render_dictator_panel(arena: ULTArenaState, opp_display: str) -> None:
             "Receive it",
             key="ult_btn_dictator_receive",
             type="primary",
-            use_container_width=True,
+            width="stretch",
         ):
             # player_accepts=True has no effect when dictator_mode=True
             play_responder_round(arena, player_accepts=True)
@@ -487,7 +504,12 @@ def _render_active_round(arena: ULTArenaState, progress: dict) -> None:
     # Round header
     mode_label = "Dictator" if dictator else "Ultimatum"
     role_label = "Proposer" if role == ROLE_PROPOSER else "Responder"
-    st.subheader(f"Round {round_num} — {mode_label} — You are: {role_label}")
+    section_title(f"Round {round_num} of {ULT_SESSION_LENGTH} — {mode_label}")
+    st.markdown(
+        f"<div style='font-size:1.05rem;font-weight:600;color:#E2E6EA;margin-bottom:0.4rem;'>"
+        f"You are: {role_label}</div>",
+        unsafe_allow_html=True,
+    )
 
     awaiting_next = st.session_state.get(_KEY_AWAITING_NEXT, False)
 
@@ -505,7 +527,7 @@ def _render_active_round(arena: ULTArenaState, progress: dict) -> None:
                 "Next round",
                 key="ult_btn_next_round",
                 type="primary",
-                use_container_width=True,
+                width="stretch",
             ):
                 st.session_state[_KEY_AWAITING_NEXT] = False
                 # Clear pending offer for new responder round
@@ -523,24 +545,99 @@ def _render_active_round(arena: ULTArenaState, progress: dict) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Debrief reveal helper
+# ---------------------------------------------------------------------------
+
+
+def _make_reveal_body(arena: ULTArenaState) -> str:
+    """Generate reveal text from the player's actual session behavior."""
+    sentences = []
+
+    # Compute proposer generosity from reputation memories
+    total_proposer_rounds = sum(m.rounds_as_proposer for m in arena.reputation_memories)
+    total_offered_fraction = sum(m.total_offered_fraction for m in arena.reputation_memories)
+    mean_generosity = (
+        total_offered_fraction / total_proposer_rounds
+        if total_proposer_rounds > 0 else None
+    )
+
+    # Compute rejection behavior
+    total_responder_rounds = sum(m.rounds_as_responder for m in arena.reputation_memories)
+    total_rejections = sum(m.rejection_count for m in arena.reputation_memories)
+    rejection_rate = (
+        total_rejections / total_responder_rounds
+        if total_responder_rounds > 0 else None
+    )
+
+    if mean_generosity is not None:
+        if mean_generosity >= 0.45:
+            sentences.append(
+                "As proposer, you leaned toward equal or near-equal splits — "
+                "generous enough that most responses were acceptances."
+            )
+        elif mean_generosity >= 0.30:
+            sentences.append(
+                "As proposer, you offered a meaningful share but kept the larger piece — "
+                "the kind of offer that sits right at the edge of what most responders will accept."
+            )
+        else:
+            sentences.append(
+                "As proposer, you kept most of the prize for yourself — "
+                "the responder's reaction shows whether that kind of offer flies."
+            )
+
+    if rejection_rate is not None:
+        if rejection_rate > 0.5:
+            sentences.append(
+                "As responder, you rejected more often than not — "
+                "choosing nothing over an offer that felt wrong, even at a cost."
+            )
+        elif rejection_rate > 0.0:
+            sentences.append(
+                "As responder, you accepted most offers but drew a line at some — "
+                "there's a threshold where the numbers stop mattering and the principle does."
+            )
+        else:
+            sentences.append(
+                "As responder, you accepted every offer — "
+                "whether from patience, calculation, or something else is worth noticing."
+            )
+
+    if not sentences:
+        sentences.append(
+            "The session is over. Whatever you offered and whatever you rejected "
+            "tells you something about where your fairness line sits."
+        )
+
+    return " ".join(sentences[:2])
+
+
+# ---------------------------------------------------------------------------
 # Session complete debrief
 # ---------------------------------------------------------------------------
 
 
 def _render_debrief(arena: ULTArenaState, progress: dict) -> None:
     """Show post-session summary."""
-    st.success(f"Session complete — {ULT_SESSION_LENGTH} rounds played.")
-    st.write(
-        f"You ended with **{arena.player_total:,} tokens** over {ULT_SESSION_LENGTH} rounds."
+    result_banner(
+        "neutral",
+        f"Session complete — {ULT_SESSION_LENGTH} rounds played.",
+        f"You ended with {arena.player_total:,} tokens over {ULT_SESSION_LENGTH} rounds.",
     )
+
+    reveal_body = _make_reveal_body(arena)
+    if reveal_body:
+        arena_reveal("What just happened in there", reveal_body)
 
     nudge_state = get_nudge_state(progress, ULT_CONCEPT_KEY)
     exp = progress.get("concepts", {}).get(ULT_CONCEPT_KEY, 0)
 
     if nudge_state == NudgeState.NEW:
-        st.info(
+        result_banner(
+            "neutral",
+            "Notice anything?",
             "Try raising the stake size and notice how your tolerance for unfairness shifts. "
-            "Or turn on Mystery opponents and see if you can read their style before they're revealed."
+            "Or turn on Mystery opponents and see if you can read their style before they're revealed.",
         )
     elif nudge_state == NudgeState.PROGRESSING:
         st.caption(
@@ -555,6 +652,7 @@ def _render_debrief(arena: ULTArenaState, progress: dict) -> None:
         st.session_state[_KEY_SHOW_SETUP] = True
         st.session_state[_KEY_LAST_NUDGE] = None
         st.session_state[_KEY_AWAITING_NEXT] = False
+        st.session_state.pop("ult_progress_saved", None)  # BUG FIX: clear so next replay increments
         st.rerun()
 
 
@@ -569,7 +667,7 @@ def _render_opponent_roster(arena: ULTArenaState) -> None:
         for i, opp in enumerate(arena.opponents):
             display = arena.display_names[i]
             is_current = (i == arena.current_opponent_idx) and not arena.session_complete
-            badge = " ← current" if is_current else ""
+            badge = " <- current" if is_current else ""
             if display == "???" and arena.mystery_mode:
                 st.write(f"**???{badge}**: Identity hidden until played.")
             else:
@@ -588,6 +686,7 @@ def render() -> None:
     The shell owns page config and the back-to-menu control;
     this function owns everything Ultimatum-specific.
     """
+    inject_theme()
     _init_session_state()
 
     if "progress" not in st.session_state:
@@ -600,32 +699,31 @@ def render() -> None:
     )
 
     # Main header
-    st.title("Ultimatum & Dictator")
-    st.caption(
-        "One player proposes a split of the prize. "
-        "The other accepts — or rejects and both walk away with nothing. "
-        "Cold logic says take any offer. Feel it for yourself."
+    app_header(
+        title="Ultimatum & Dictator",
+        subtitle="One player proposes a split of the prize. The other accepts — or rejects and both walk away with nothing. Cold logic says take any offer. Feel it for yourself.",
     )
 
     arena: ULTArenaState | None = st.session_state[_KEY_ARENA]
 
     # --- Setup / Start ---
     if arena is None:
-        st.write(
-            "You'll alternate roles each round: sometimes you propose the split, "
-            "sometimes you respond to the AI's offer. "
-            "Every few rounds a Dictator round appears — the proposer's offer simply stands "
-            "and the responder has no veto. "
-            "Notice how that changes what generosity looks like."
+        game_briefing(
+            story=STORY,
+            how_it_works=HOW_IT_WORKS,
+            what_to_watch=WHAT_TO_WATCH,
+            why_it_matters=WHY_IT_MATTERS,
+            your_job=YOUR_JOB,
         )
+        st.divider()
 
         nudge_state = get_nudge_state(progress, ULT_CONCEPT_KEY)
         if nudge_state == NudgeState.NEW:
-            st.info(
-                "**First time here?** "
-                "Start with the default setup. "
-                "As proposer, try offering half and notice what happens. "
-                "As responder, notice what it feels like when an offer is insulting."
+            result_banner(
+                "neutral",
+                "Ready to step in?",
+                "Start with the default setup. As proposer, try offering half and notice what happens. "
+                "As responder, notice what it feels like when an offer seems unfair.",
             )
 
         col_start, _ = st.columns([1, 2])
@@ -633,7 +731,7 @@ def render() -> None:
             if st.button(
                 "Start session",
                 type="primary",
-                use_container_width=True,
+                width="stretch",
                 key="ult_start_session",
             ):
                 arena = init_ult_arena(
@@ -670,6 +768,14 @@ def render() -> None:
         return
 
     # --- Active session ---
+    briefing_expander(
+        story=STORY,
+        how_it_works=HOW_IT_WORKS,
+        what_to_watch=WHAT_TO_WATCH,
+        why_it_matters=WHY_IT_MATTERS,
+        your_job=YOUR_JOB,
+    )
+
     left_col, right_col = st.columns([3, 2], gap="large")
 
     with left_col:

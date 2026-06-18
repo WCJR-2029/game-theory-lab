@@ -29,6 +29,13 @@ from gtlab.concepts.chicken.strategies import (
     CHK_DEFAULT_SELECTED,
 )
 
+# ---------------------------------------------------------------------------
+# NOTE: CHKHumanStrategy was removed in the Refined Dark Lab rollout.
+# The view drives commit/move directly via decide_commit() / play_round();
+# no subclass wrapper is needed. The base HumanStrategy (via set_move/choose)
+# is used directly inside those helpers and never stored on CHKArenaState.
+# ---------------------------------------------------------------------------
+
 # Friendly aliases
 SWERVE = COOPERATE
 STRAIGHT = DEFECT
@@ -60,48 +67,6 @@ def _apply_noise_chk(
 
 
 # ---------------------------------------------------------------------------
-# Human strategy — supports commit + choose cycle
-# ---------------------------------------------------------------------------
-
-
-class CHKHumanStrategy(HumanStrategy):
-    """Human strategy with Chicken commitment support.
-
-    The UI calls:
-      1. ``set_commit(committed)``  before the engine's commit phase
-      2. ``set_move(move)``         before the engine's choice phase (only if not committed)
-
-    commit() returns the pending commit flag and resets it.
-    commitment_aware_choose() returns the pending move.
-    """
-
-    name = "You"
-    description = "The human player. Commit and move are supplied by the interface."
-
-    def __init__(self) -> None:
-        super().__init__()
-        self._pending_commit: bool = False
-
-    def set_commit(self, committed: bool) -> None:
-        """Supply the commit decision before the engine calls commit()."""
-        self._pending_commit = committed
-
-    def commit(self, history: History) -> bool:
-        """Return the pending commit flag and reset to False."""
-        result = self._pending_commit
-        self._pending_commit = False
-        return result
-
-    def commitment_aware_choose(self, history: History, opp_committed: bool) -> Move:
-        """Return the pending move (set via set_move). Delegates to choose()."""
-        return self.choose(history)
-
-    def reset(self) -> None:
-        super().reset()
-        self._pending_commit = False
-
-
-# ---------------------------------------------------------------------------
 # Arena state dataclass
 # ---------------------------------------------------------------------------
 
@@ -117,9 +82,6 @@ class CHKArenaState:
     selected_bot_names: list[str] = field(default_factory=lambda: list(CHK_DEFAULT_SELECTED))
     noise: float = 0.0
     mystery_mode: bool = False
-
-    # Human player
-    human: CHKHumanStrategy = field(default_factory=CHKHumanStrategy)
 
     # Bot instances (fresh per run)
     bots: list[Strategy] = field(default_factory=list)
@@ -200,7 +162,6 @@ def init_chk_arena(
         game=game,
     )
     state.bots = build_chk_roster(selected_bot_names)
-    state.human = CHKHumanStrategy()
     state.rng = random.Random()
 
     state.bot_standings = {
@@ -421,9 +382,14 @@ def _finalize_chk_match(state: CHKArenaState) -> None:
 
 
 def compute_chk_standings(state: CHKArenaState) -> list[dict]:
-    """Return sorted standings list for the leaderboard."""
+    """Return sorted standings list for the leaderboard.
+
+    Human row carries ``unplayed=True`` until at least one match is complete,
+    mirroring PD's behaviour so the display dataframe can show "—" safely.
+    """
     rows = []
 
+    human_unplayed = state.player_matches_played == 0
     human_mean = (
         state.player_total_score / state.player_total_rounds
         if state.player_total_rounds > 0
@@ -436,6 +402,7 @@ def compute_chk_standings(state: CHKArenaState) -> list[dict]:
         "mean_score": round(human_mean, 2),
         "is_human": True,
         "is_current_opponent": False,
+        "unplayed": human_unplayed,
     })
 
     current_opp_name = (
@@ -457,6 +424,7 @@ def compute_chk_standings(state: CHKArenaState) -> list[dict]:
             "matches_played": st_data.get("matches_played", 0),
             "is_human": False,
             "is_current_opponent": (bot.name == current_opp_name),
+            "unplayed": False,
         })
 
     rows.sort(key=lambda r: (r["total_score"], r["mean_score"]), reverse=True)
