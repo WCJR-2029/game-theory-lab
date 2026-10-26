@@ -213,12 +213,38 @@ def test_mixed_strategies_frequency_note_is_only_about_the_frequency_counter():
     from gtlab.concepts.mixed_strategies import opponents
 
     read = NS(prediction_correct=True)
-    for opponent in (opponents.FrequencyCounter(), opponents.PatternReader()):
+    expected = {opponents.FrequencyCounter: nudges.MS_NUDGE_FREQUENCY_BIAS,
+                opponents.PatternReader: nudges.MS_NUDGE_PATTERN_READ}
+    for cls, event_expected in expected.items():
+        opponent = cls()
         event = nudges.classify_ms_round_event(_ms_arena(opponent), read)
-        assert event is not None, f"{opponent.name}: a correct read on a lopsided mix should get a note"
+        assert event == event_expected, (opponent.name, event)
         copy = _copy(nudges.get_ms_nudge_text, event)
         for name in ("Frequency Counter", "Pattern Reader"):
             if name in copy:
                 assert name == opponent.name, f"{opponent.name} got a note about the {name}: {copy}"
-        if isinstance(opponent, opponents.PatternReader):
-            assert "Pattern Reader" in copy, copy
+
+
+def test_pattern_reader_note_is_true_when_it_falls_back_to_your_favourite_move():
+    """With no earlier run of your last moves to go on, the Pattern Reader bets on your most common move. Its note
+    must cover that too, not claim it found your rhythm."""
+    import random
+    from gtlab.concepts.mixed_strategies import model, opponents
+
+    game = next(g for g in vars(model).values() if isinstance(g, model.ZeroSumGame) and len(g.moves) == 2)
+    heads, tails = game.moves
+    history = [heads, heads, tails]  # the last run, (heads, tails), never came up before
+    prediction = opponents.PatternReader(memory_depth=2).predict_and_respond(game, history, [], random.Random(1))
+    assert prediction.predicted_human_move == heads, "precondition: the fallback bets on your most common move"
+    copy = _copy(nudges.get_ms_nudge_text, nudges.MS_NUDGE_PATTERN_READ)
+    assert "most often" in copy and "last few moves" in copy, copy
+    assert "read your rhythm" not in copy.lower(), copy
+
+
+def test_randomizer_note_fits_both_games():
+    """The Perfect Randomizer plays uniformly over two moves (Matching Pennies) or three (Rock-Paper-Scissors)."""
+    from gtlab.concepts.mixed_strategies import model
+    sizes = sorted(len(g.moves) for g in vars(model).values() if isinstance(g, model.ZeroSumGame))
+    assert sizes == [2, 3]
+    copy = _copy(nudges.get_ms_nudge_text, nudges.MS_NUDGE_RANDOMIZER_WALL)
+    assert "50/50" not in copy, copy

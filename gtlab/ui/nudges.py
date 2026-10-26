@@ -899,15 +899,15 @@ _MS_NUDGES: dict[str, dict] = {
         ),
     },
     MS_NUDGE_PATTERN_READ: {
-        "headline": "It read your rhythm.",
+        "headline": "It called your move.",
         "body": (
-            "The Pattern Reader looks at your last few moves, finds the times that same run came up "
-            "before, and bets you'll do what you did next back then. "
-            "Mixing it up only helps if the mix has no rhythm."
+            "The Pattern Reader looks at your last few moves and bets you'll do what you did after "
+            "that same run before. When it hasn't seen the run yet, it bets on the move you play most "
+            "often. Mixing it up only helps if the mix has no rhythm and no favourite."
         ),
     },
     MS_NUDGE_RANDOMIZER_WALL: {
-        "headline": "Against pure 50/50, you can't lose much - or win much.",
+        "headline": "Against pure chance, you can't lose much - or win much.",
         "body": (
             "That's what unbeatable looks like: genuine randomness gives you nothing to exploit. "
             "No pattern, no habit, no rhythm. Long-run you'll hover right around even. "
