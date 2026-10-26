@@ -96,7 +96,18 @@ def test_debrief_names_your_own_gap(reputation_on):
     text = _make_reveal_body(arena)
 
     assert "When they could say no, you offered 50% on average; when they couldn't, 10%." in text, text
-    assert "less once the veto was gone" in text, text
+    assert "You offered less once the veto was gone." in text, text
+    # The numbers are measured; the reason behind them is the player's to answer, so it is asked, not stated.
+    assert "buying their yes?" in text and "was buying their yes" not in text.replace("was buying their yes?", ""), text
+
+
+def test_debrief_says_half_when_you_rejected_half():
+    from gtlab.concepts.ultimatum.view import _make_reveal_body
+
+    arena = _arena()
+    arena.response_log = [False, True]
+    text = _make_reveal_body(arena)
+    assert "accepted most" not in text and "half" in text, text
 
 
 def _start_ultimatum() -> AppTest:

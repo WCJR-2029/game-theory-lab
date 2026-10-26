@@ -147,7 +147,7 @@ def _render_ult_sidebar() -> tuple[list[str], list[str], int, bool, bool]:
 
     all_proposer_names = [p.name for p in PROPOSER_PROFILES]
     selected_proposers: list[str] = []
-    st.sidebar.write("**As proposer, opponent responds like:**")
+    st.sidebar.write("**When they propose, they play like:**")
     for p in PROPOSER_PROFILES:
         checked = st.sidebar.checkbox(
             p.name,
@@ -162,7 +162,7 @@ def _render_ult_sidebar() -> tuple[list[str], list[str], int, bool, bool]:
 
     all_responder_names = [p.name for p in RESPONDER_PROFILES]
     selected_responders: list[str] = []
-    st.sidebar.write("**When opponent proposes, they act like:**")
+    st.sidebar.write("**When you propose, they respond like:**")
     for p in RESPONDER_PROFILES:
         checked = st.sidebar.checkbox(
             p.name,
@@ -227,15 +227,20 @@ def _render_ult_sidebar() -> tuple[list[str], list[str], int, bool, bool]:
 # ---------------------------------------------------------------------------
 
 
-def _render_score(arena: ULTArenaState) -> None:
-    """Show running session score and round count."""
+def _render_score(arena: ULTArenaState, showing_result: bool = False) -> None:
+    """Show running session score and round count.
+
+    While a round's result is showing, the state has already moved on, so the pill
+    names the round the result belongs to.
+    """
     rounds_done = arena.round_idx
-    label = "Rounds" if arena.session_complete else "Round"
-    round_val = (
-        f"{rounds_done} / {ULT_SESSION_LENGTH} — done"
-        if arena.session_complete
-        else f"{rounds_done + 1} / {ULT_SESSION_LENGTH}"
-    )
+    label = "Rounds" if arena.session_complete and not showing_result else "Round"
+    if showing_result:
+        round_val = f"{rounds_done} / {ULT_SESSION_LENGTH}"
+    elif arena.session_complete:
+        round_val = f"{rounds_done} / {ULT_SESSION_LENGTH} — done"
+    else:
+        round_val = f"{rounds_done + 1} / {ULT_SESSION_LENGTH}"
     stat_pills_row([
         ("Your total", f"{arena.player_total:,} tokens"),
         (label, round_val),
@@ -511,15 +516,14 @@ def _render_reputation_panel(arena: ULTArenaState) -> None:
 
 def _render_active_round(arena: ULTArenaState, progress: dict) -> None:
     """Render the current round's input or result reveal."""
-    if arena.session_complete:
+    awaiting_next = st.session_state.get(_KEY_AWAITING_NEXT, False)
+    if arena.session_complete and not awaiting_next:
         return
 
     role = current_role(arena)
     dictator = current_is_dictator(arena)
     opp_display = arena.display_names[arena.current_opponent_idx]
     round_num = arena.round_idx + 1
-
-    awaiting_next = st.session_state.get(_KEY_AWAITING_NEXT, False)
 
     # Round header.  While a result is showing, the state has already moved on to the
     # next round, so the header names the round the result belongs to.
@@ -546,7 +550,17 @@ def _render_active_round(arena: ULTArenaState, progress: dict) -> None:
         st.divider()
         col_next, _ = st.columns([1, 3])
         with col_next:
-            if st.button(
+            if arena.session_complete:
+                # The last round's result stays up until the player moves on to the debrief.
+                if st.button(
+                    "See how the session went",
+                    key="ult_btn_see_debrief",
+                    type="primary",
+                    width="stretch",
+                ):
+                    st.session_state[_KEY_AWAITING_NEXT] = False
+                    st.rerun()
+            elif st.button(
                 "Next round",
                 key="ult_btn_next_round",
                 type="primary",
@@ -592,9 +606,12 @@ def _make_reveal_body(arena: ULTArenaState) -> str:
             f"when they couldn't, {mean_dictator:.0%}."
         )
         if mean_dictator < mean_generosity - 0.05:
-            gap += " You offered less once the veto was gone: part of what you gave before was buying their yes."
+            gap += (
+                " You offered less once the veto was gone. How much of what you gave before was fairness, "
+                "and how much was buying their yes?"
+            )
         elif mean_dictator > mean_generosity + 0.05:
-            gap += " You offered more once the veto was gone, with nothing to gain from it."
+            gap += " You offered more once the veto was gone."
         else:
             gap += " Your offers barely moved when the veto disappeared."
         sentences.append(gap)
@@ -620,6 +637,11 @@ def _make_reveal_body(arena: ULTArenaState) -> str:
             sentences.append(
                 "As responder, you rejected more often than not — "
                 "choosing nothing over an offer that felt wrong, even at a cost."
+            )
+        elif rejection_rate == 0.5:
+            sentences.append(
+                "As responder, you accepted half the offers and turned down the other half — "
+                "somewhere between them sits the line where the numbers stop mattering."
             )
         elif rejection_rate > 0.0:
             sentences.append(
@@ -778,8 +800,10 @@ def render() -> None:
             st.rerun()
         return
 
-    # --- Session complete ---
-    if arena.session_complete:
+    showing_result = st.session_state.get(_KEY_AWAITING_NEXT, False) and arena.last_role is not None
+
+    # --- Session complete (after the player has seen the last round's result) ---
+    if arena.session_complete and not showing_result:
         # Increment progress once at the end
         if not st.session_state.get("ult_progress_saved", False):
             prog = increment_experience(progress, ULT_CONCEPT_KEY, 1)
@@ -802,7 +826,7 @@ def render() -> None:
         your_job=YOUR_JOB,
     )
 
-    _render_score(arena)
+    _render_score(arena, showing_result=showing_result)
     st.divider()
     _render_active_round(arena, progress)
 

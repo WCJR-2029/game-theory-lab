@@ -54,8 +54,11 @@ def _check(rounds, claims, get_text):
 # ---------------------------------------------------------------------------
 
 ULT_CLAIMS = {
+    # "You burned free money" is only true when there was money to burn.
     nudges.ULT_NUDGE_PUNISHED_UNFAIRNESS: ("to punish a stingy offer",
-        lambda r: r.role == "responder" and not r.accepted and not r.dictator and r.fraction < FAIR),
+        lambda r: r.role == "responder" and not r.accepted and not r.dictator and 0 < r.fraction < FAIR),
+    "ult_rejected_zero": ("They offered you nothing, and you said no.",
+        lambda r: r.role == "responder" and not r.accepted and not r.dictator and r.fraction == 0),
     "ult_rejected_fair": ("You turned down a fair split.",
         lambda r: r.role == "responder" and not r.accepted and not r.dictator and r.fraction >= FAIR),
     nudges.ULT_NUDGE_SWALLOWED_HIGH_STAKES: ("Huge pot, unfair split — and you took it.",
@@ -65,7 +68,9 @@ ULT_CLAIMS = {
     "ult_dictator_received": ("You couldn't say no.",
         lambda r: r.role == "responder" and r.dictator),
     nudges.ULT_NUDGE_AI_REJECTED_YOU: ("would rather both lose than let an unfair offer stand",
-        lambda r: r.role == "proposer" and not r.accepted and r.fraction < FAIR),
+        lambda r: r.role == "proposer" and not r.accepted and 0 < r.fraction < FAIR),
+    "ult_ai_rejected_zero": ("You offered them nothing, and they said no.",
+        lambda r: r.role == "proposer" and not r.accepted and r.fraction == 0),
     "ult_ai_rejected_fair": ("They turned down a fair split.",
         lambda r: r.role == "proposer" and not r.accepted and r.fraction >= FAIR),
     nudges.ULT_NUDGE_REPUTATION_BITE: ("start offering you less",

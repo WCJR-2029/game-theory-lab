@@ -24,14 +24,22 @@ def _start_session(at: AppTest) -> AppTest:
     at.run()
     return at
 
+def _move_on(at: AppTest) -> None:
+    """Leave a round's result: "Next round", or after the last round "See how the session went"."""
+    keys = [b.key for b in at.button]
+    for key in ("ult_btn_next_round", "ult_btn_see_debrief"):
+        if key in keys:
+            at.button(key=key).click()
+            at.run()
+            assert not at.exception
+            return
+
+
 def _play_proposer(at: AppTest) -> AppTest:
     at.button(key="ult_btn_propose").click()
     at.run()
     assert not at.exception
-    if "ult_btn_next_round" in [b.key for b in at.button]:
-        at.button(key="ult_btn_next_round").click()
-        at.run()
-        assert not at.exception
+    _move_on(at)
     return at
 
 def _play_responder(at: AppTest, accept: bool = True) -> AppTest:
@@ -46,10 +54,7 @@ def _play_responder(at: AppTest, accept: bool = True) -> AppTest:
         at.button(key="ult_btn_accept").click()
     at.run()
     assert not at.exception
-    if "ult_btn_next_round" in [b.key for b in at.button]:
-        at.button(key="ult_btn_next_round").click()
-        at.run()
-        assert not at.exception
+    _move_on(at)
     return at
 
 

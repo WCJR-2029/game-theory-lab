@@ -564,6 +564,8 @@ ULT_NUDGE_AI_REJECTED_YOU = "ult_ai_rejected_you"
 ULT_NUDGE_REJECTED_FAIR = "ult_rejected_fair"          # You rejected a fair offer
 ULT_NUDGE_AI_REJECTED_FAIR = "ult_ai_rejected_fair"    # They rejected your fair offer
 ULT_NUDGE_DICTATOR_RECEIVED = "ult_dictator_received"  # Dictator round with you receiving
+ULT_NUDGE_REJECTED_ZERO = "ult_rejected_zero"          # You rejected an offer of nothing
+ULT_NUDGE_AI_REJECTED_ZERO = "ult_ai_rejected_zero"    # They rejected your offer of nothing
 
 #: At or above this share for the responder, an offer is fair (the "fair offer" nudge uses the same line).
 ULT_FAIR_FRACTION = 0.40
@@ -651,6 +653,20 @@ _ULT_NUDGES: dict[str, dict] = {
             "Notice which kind this one is."
         ),
     },
+    ULT_NUDGE_REJECTED_ZERO: {
+        "headline": "They offered you nothing, and you said no.",
+        "body": (
+            "Turning down zero cost you nothing, and it cost them the whole prize. "
+            "Notice whether that felt like a choice, or like the only answer."
+        ),
+    },
+    ULT_NUDGE_AI_REJECTED_ZERO: {
+        "headline": "You offered them nothing, and they said no.",
+        "body": (
+            "Saying no cost them nothing, and it cost you the whole prize. "
+            "A zero offer leaves the other side nothing to lose by refusing."
+        ),
+    },
     ULT_NUDGE_DICTATOR_RECEIVED: {
         "headline": "You couldn't say no. The offer just stood.",
         "body": (
@@ -715,8 +731,11 @@ def classify_ult_round_event(
     if dictator_mode:
         return ULT_NUDGE_DICTATOR_GENEROSITY if role == "proposer" else ULT_NUDGE_DICTATOR_RECEIVED
 
-    # 2. Player rejected an offer (responder role, Ultimatum)
+    # 2. Player rejected an offer (responder role, Ultimatum).  Rejecting zero costs nothing,
+    #    so it is not "burning free money".
     if role == "responder" and not accepted:
+        if responder_fraction == 0:
+            return ULT_NUDGE_REJECTED_ZERO
         return ULT_NUDGE_REJECTED_FAIR if fair else ULT_NUDGE_PUNISHED_UNFAIRNESS
 
     # 3. High stakes + player accepted an unfair split
@@ -731,6 +750,8 @@ def classify_ult_round_event(
 
     # 4. AI rejected player's offer (proposer role, not accepted)
     if role == "proposer" and not accepted:
+        if responder_fraction == 0:
+            return ULT_NUDGE_AI_REJECTED_ZERO
         return ULT_NUDGE_AI_REJECTED_FAIR if fair else ULT_NUDGE_AI_REJECTED_YOU
 
     # 5. Reputation bite: reputation on + memory shows player was stingy/rejected
