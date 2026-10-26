@@ -121,6 +121,9 @@ class CHKArenaState:
     last_noise_flipped: bool = False
     last_nudge_event: Optional[str] = None
     last_round_scores: tuple = (0, 0)
+    # (opponent name, your score, their score) of the match that just ended,
+    # shown as a one-line "Match over" at the start of the next match.
+    last_match_summary: Optional[tuple] = None
 
     # Two-phase UI state
     commit_decided: bool = False          # True after commit phase resolves
@@ -364,6 +367,8 @@ def _finalize_chk_match(state: CHKArenaState) -> None:
         state.bot_standings[opp.name]["total_rounds"] += state.rounds_this_match
         state.bot_standings[opp.name]["matches_played"] += 1
 
+    state.last_match_summary = (opp.name, state.player_match_score, state.opp_match_score)
+
     state.current_opponent_idx += 1
     if state.current_opponent_idx >= len(state.bots):
         state.run_complete = True
@@ -381,6 +386,8 @@ def _finalize_chk_match(state: CHKArenaState) -> None:
         state.commit_decided = False
         state.player_committed_this_round = False
         state.opp_committed_this_round = False
+        # The last nudge was about the previous opponent; don't show it against the next one.
+        state.last_nudge_event = None
         state.bots[state.current_opponent_idx].reset()
 
 

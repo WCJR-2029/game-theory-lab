@@ -117,6 +117,9 @@ class SHArenaState:
     last_noise_flipped: bool = False
     last_nudge_event: Optional[str] = None
     last_round_scores: tuple = (0, 0)
+    # (opponent name, your score, their score) of the match that just ended,
+    # shown as a one-line "Match over" at the start of the next match.
+    last_match_summary: Optional[tuple] = None
 
     # Opponent display names (may be "???" in mystery mode)
     opponent_display_names: list[str] = field(default_factory=list)
@@ -348,6 +351,8 @@ def _finalize_sh_match(state: SHArenaState) -> None:
         state.bot_standings[opp.name]["total_rounds"] += state.rounds_this_match
         state.bot_standings[opp.name]["matches_played"] += 1
 
+    state.last_match_summary = (opp.name, state.player_match_score, state.opp_match_score)
+
     state.current_opponent_idx += 1
     if state.current_opponent_idx >= len(state.bots):
         state.run_complete = True
@@ -365,6 +370,8 @@ def _finalize_sh_match(state: SHArenaState) -> None:
         state.signal_submitted = False
         state.player_pending_signal = None
         state.opp_pending_announced = None
+        # The last nudge was about the previous opponent; don't show it against the next one.
+        state.last_nudge_event = None
         state.bots[state.current_opponent_idx].reset()
 
 

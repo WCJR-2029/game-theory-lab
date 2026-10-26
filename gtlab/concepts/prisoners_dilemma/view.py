@@ -42,7 +42,7 @@ from gtlab.ui.theme import (
     intro_above_fold,
     transfer_expander,
 )
-from gtlab.ui.utils import ordinal, running_total, standings_halves, top_bot_lead
+from gtlab.ui.utils import ordinal, match_over_line, running_total, standings_halves, top_bot_lead
 from gtlab.concepts.prisoners_dilemma.briefing import (
     STORY,
     HOW_IT_WORKS,
@@ -274,6 +274,11 @@ def _render_current_match_panel(arena: ArenaState, progress: dict) -> None:
     _render_active_score_line(arena)
 
     st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+
+    # The previous match's result, once, before the next opponent starts.
+    match_over = match_over_line(arena)
+    if match_over:
+        result_banner("neutral", match_over)
 
     section_title(f"Match {match_num} of {total_opponents} — vs. {display_name}")
 
