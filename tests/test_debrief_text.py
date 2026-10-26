@@ -15,7 +15,7 @@ import re
 
 import pytest
 
-from gtlab.ui.utils import HUMAN_LABEL
+from gtlab.ui.utils import HUMAN_LABEL, standings_halves
 from gtlab.ui.game_loop import DEFAULT_SELECTED
 from gtlab.concepts.stag_hunt.strategies import SH_DEFAULT_SELECTED
 from gtlab.concepts.chicken.strategies import CHK_DEFAULT_SELECTED
@@ -25,6 +25,7 @@ from gtlab.concepts.chicken.view import _make_chk_reveal_body
 
 TOP_CLAIM = re.compile(r"\b(at|reached) the top\b")
 LOW_CLAIM = re.compile(r"\b(sank|finished low)\b")
+HIGH_CLAIM = re.compile(r"\b(near the top|fared well|held its own)\b")
 
 
 def _rows(order: list[str]) -> list[dict]:
@@ -46,6 +47,10 @@ GAMES = {
     "stag_hunt": (lambda rows: _make_sh_reveal_body(rows), list(SH_DEFAULT_SELECTED)),
     "chicken": (lambda rows: _make_chk_reveal_body(rows, None), list(CHK_DEFAULT_SELECTED)),
 }
+
+
+def _sentences(text: str) -> list[str]:
+    return re.split(r"(?<=[.)])\s+", text)
 
 
 def _mentions(text: str, name: str, roster: list[str]) -> int:
@@ -104,7 +109,7 @@ class TestOneSentencePerBot:
         text = _make_sh_reveal_body(_rows(["Cautious", HUMAN_LABEL] + rest))
         assert _mentions(text, "Cautious", list(SH_DEFAULT_SELECTED)) == 1, text
 
-    def test_no_bot_is_named_twice_in_any_order(self, game):
+    def test_no_bot_is_named_twice_in_300_shuffled_orders(self, game):
         reveal, roster = game
         rng = random.Random(20261026)
         for _ in range(300):
@@ -125,11 +130,12 @@ class TestMiddleRankIsNotLow:
             ("prisoners_dilemma", DEFAULT_SELECTED, "Always Cooperate"),
             ("stag_hunt", SH_DEFAULT_SELECTED, "Bluffer"),
             ("stag_hunt", SH_DEFAULT_SELECTED, "Trusting"),
+            ("stag_hunt", SH_DEFAULT_SELECTED, "Cautious"),
             ("chicken", CHK_DEFAULT_SELECTED, "Committer"),
             ("chicken", CHK_DEFAULT_SELECTED, "Dove"),
         ],
     )
-    def test_middle_of_an_odd_table_does_not_sink(self, reveal_name, roster, bot):
+    def test_middle_of_an_odd_table_is_neither_high_nor_low(self, reveal_name, roster, bot):
         reveal, _ = GAMES[reveal_name]
         others = [b for b in roster if b != bot]
         if (len(others) + 2) % 2 == 0:
@@ -138,11 +144,15 @@ class TestMiddleRankIsNotLow:
         mid = len(order + [bot]) // 2  # 0-based middle index of the full table
         order.insert(mid, bot)
         assert len(order) % 2 == 1 and order[len(order) // 2] == bot
-        text = reveal(_rows(order))
-        low_sentences = [s for s in re.split(r"(?<=[.)])\s+", text) if bot in s and LOW_CLAIM.search(s)]
-        assert not low_sentences, f"{bot} at {mid + 1} of {len(order)}: {text}"
+        rows = _rows(order)
+        top, bottom = standings_halves(rows)
+        assert bot not in top and bot not in bottom
+        text = reveal(rows)
+        placed = [s for s in _sentences(text) if bot in s and (LOW_CLAIM.search(s) or HIGH_CLAIM.search(s))]
+        assert not placed, f"{bot} at {mid + 1} of {len(order)}: {text}"
 
     def test_bottom_rank_still_sinks(self):
         rest = [b for b in DEFAULT_SELECTED if b != "Always Defect"]
         text = _make_reveal_body(_rows([HUMAN_LABEL] + rest + ["Always Defect"]))
-        assert "Always Defect" in text and "sank" in text, text
+        ad = [s for s in _sentences(text) if "Always Defect" in s]
+        assert len(ad) == 1 and "sank" in ad[0], text

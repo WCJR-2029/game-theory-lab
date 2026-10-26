@@ -12,6 +12,8 @@ The same loop shape lives in all three 2x2 games, so each is checked:
 
 from __future__ import annotations
 
+import copy
+
 import pytest
 
 from gtlab.engine import COOPERATE
@@ -111,8 +113,17 @@ class TestPlayOutOneMatch:
         for _ in range(len(state.bots)):
             game["fast_forward"](state)
         assert state.run_complete
-        before = (state.player_total_score, state.player_total_rounds, state.player_matches_played)
+        before = _snapshot(state)
 
         game["fast_forward"](state)
 
-        assert (state.player_total_score, state.player_total_rounds, state.player_matches_played) == before
+        assert _snapshot(state) == before
+
+
+def _snapshot(state):
+    return (
+        state.player_total_score, state.player_total_rounds, state.player_matches_played,
+        state.current_opponent_idx, state.rounds_this_match, state.player_match_score, state.opp_match_score,
+        list(state.player_history), list(state.opp_history), copy.deepcopy(state.bot_standings),
+        state.last_match_summary, state.run_complete,
+    )

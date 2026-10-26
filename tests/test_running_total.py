@@ -13,7 +13,9 @@ import re
 import pytest
 from streamlit.testing.v1 import AppTest
 
-from gtlab.ui.game_loop import DEFAULT_SELECTED, init_arena, fast_forward_match
+from gtlab.ui.game_loop import init_arena, fast_forward_match
+from gtlab.concepts.stag_hunt.sh_loop import init_sh_arena, fast_forward_sh_match
+from gtlab.concepts.chicken.chk_loop import init_chk_arena, fast_forward_chk_match
 
 APP_PATH = "app.py"
 TIMEOUT = 30
@@ -87,8 +89,11 @@ class TestTotalPill:
         concept, prefix, arena_key, one_round = game
         at = _start(concept, prefix)
 
+        # One scoring round first, so "Play out this match" repeats a move that scores.
+        one_round(at)
         at.button(key=f"{prefix}_btn_fast_forward").click()
         at.run()
+        assert at.session_state[arena_key].player_total_score != 0, "the first match should score"
         one_round(at)
         assert not at.exception
 
@@ -99,11 +104,17 @@ class TestTotalPill:
 
 
 class TestRunningTotalHelper:
-    def test_no_double_count_once_the_run_is_complete(self):
+    @pytest.mark.parametrize("init, fast_forward, roster", [
+        (init_arena, fast_forward_match, ["Tit for Tat"]),
+        (init_sh_arena, fast_forward_sh_match, ["Trusting"]),
+        (init_chk_arena, fast_forward_chk_match, ["Hawk"]),
+    ])
+    def test_no_double_count_once_the_run_is_complete(self, init, fast_forward, roster):
         from gtlab.ui.utils import running_total
 
-        state = init_arena(list(DEFAULT_SELECTED), noise=0.0, mystery_mode=False)
+        state = init(roster, 0.0, False)
         while not state.run_complete:
-            fast_forward_match(state)
+            fast_forward(state)
         # The last match's score stays in player_match_score after the run ends; it is already in the total.
+        assert state.player_match_score != 0, "precondition: a retained score that double counting would change"
         assert running_total(state) == state.player_total_score

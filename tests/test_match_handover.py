@@ -55,11 +55,12 @@ def game(request):
     return GAMES[request.param]
 
 
-def _play_first_match(state, one_round, moves):
-    """Play the first match round by round, alternating the two moves. Returns the last round's result."""
+def _play_match(state, one_round, moves):
+    """Play the current match round by round, alternating the two moves. Returns the last round's result."""
+    start = state.current_opponent_idx
     result = None
     i = 0
-    while state.current_opponent_idx == 0:
+    while state.current_opponent_idx == start:
         result = one_round(state, moves[i % 2])
         i += 1
     return result
@@ -70,7 +71,7 @@ class TestLoopHandover:
         init, one_round, moves = game
         state = init()
 
-        last = _play_first_match(state, one_round, moves)
+        last = _play_match(state, one_round, moves)
 
         assert last["match_complete"]
         assert last["nudge_event"] is not None, "precondition: the final round raised a nudge"
@@ -80,13 +81,19 @@ class TestLoopHandover:
     def test_finished_match_leaves_a_summary(self, game):
         init, one_round, moves = game
         state = init()
-        first = state.bots[0].name
-        opp_before = state.bot_standings[first]["total_score"]
+        for idx in (0, 1):  # the second match catches a summary that stores running totals instead of this match's
+            name = state.bots[idx].name
+            you_before = state.player_total_score
+            them_before = state.bot_standings[name]["total_score"]
 
-        _play_first_match(state, one_round, moves)
+            _play_match(state, one_round, moves)
 
-        opp_match = state.bot_standings[first]["total_score"] - opp_before
-        assert state.last_match_summary == (first, state.player_total_score, opp_match)
+            assert state.current_opponent_idx == idx + 1
+            assert state.last_match_summary == (
+                name,
+                state.player_total_score - you_before,
+                state.bot_standings[name]["total_score"] - them_before,
+            )
 
     def test_no_summary_before_the_first_match_ends(self, game):
         init, one_round, moves = game
@@ -98,6 +105,28 @@ class TestLoopHandover:
 
 def _texts(at: AppTest) -> str:
     return "\n".join(md.value for md in at.markdown) + "\n".join(c.value for c in at.caption)
+
+
+def _screen_pd_round(at):
+    at.button(key="pd_btn_cooperate").click()
+    at.run()
+
+
+def _screen_sh_round(at):
+    at.button(key="sh_btn_announce_stag").click()
+    at.run()
+    at.button(key="sh_btn_commit_stag").click()
+    at.run()
+
+
+def _screen_chk_round(at):
+    at.button(key="chk_btn_keep_wheel").click()
+    at.run()
+    at.button(key="chk_btn_swerve").click()
+    at.run()
+
+
+_SCREEN_ROUND = {"pd": _screen_pd_round, "sh": _screen_sh_round, "chk": _screen_chk_round}
 
 
 class TestScreenHandover:
@@ -128,11 +157,22 @@ class TestScreenHandover:
         at.button(key=f"{prefix}_start_run").click()
         at.run()
         assert "Match over:" not in _texts(at)
+        arena = at.session_state[f"{prefix}_arena"]
+        name = arena.bots[0].name
+        them_before = arena.bot_standings[name]["total_score"]
 
         at.button(key=f"{prefix}_btn_fast_forward").click()
         at.run()
         assert not at.exception
 
+        # Scores worked out from the standings, not read back from the summary being rendered.
         arena = at.session_state[f"{prefix}_arena"]
-        name, you, them = arena.last_match_summary
-        assert f"Match over: you {you}, {name} {them}" in _texts(at)
+        you = arena.player_total_score
+        them = arena.bot_standings[name]["total_score"] - them_before
+        line = f"Match over: you {you}, {name} {them}"
+        assert _texts(at).count(line) == 1, _texts(at)
+        assert _texts(at).count("Match over:") == 1
+
+        _SCREEN_ROUND[prefix](at)
+        assert not at.exception
+        assert "Match over:" not in _texts(at)
