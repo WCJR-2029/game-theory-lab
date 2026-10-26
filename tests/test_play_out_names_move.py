@@ -23,6 +23,8 @@ from gtlab.engine import COOPERATE, DEFECT
 from gtlab.ui import game_loop
 from gtlab.concepts.stag_hunt import sh_loop
 from gtlab.concepts.chicken import chk_loop
+from gtlab.concepts.stag_hunt.strategies import SH_DEFAULT_SELECTED
+from gtlab.concepts.chicken.strategies import CHK_DEFAULT_SELECTED
 
 APP_PATH = "app.py"
 TIMEOUT = 30
@@ -58,16 +60,19 @@ GAMES = {
         prefix="pd", arena_key="pd_arena", module=game_loop, inner="step_round",
         fast_forward=game_loop.fast_forward_match, labels={COOPERATE: "Cooperate", DEFECT: "Defect"},
         default="Cooperate", play=_pd_move, keeps_wheel=False,
+        match_length=game_loop.MATCH_LENGTH, roster=game_loop.DEFAULT_SELECTED,
     ),
     "stag_hunt": dict(
         prefix="sh", arena_key="sh_arena", module=sh_loop, inner="commit_move",
         fast_forward=sh_loop.fast_forward_sh_match, labels={COOPERATE: "Stag", DEFECT: "Hare"},
         default="Stag", play=_sh_move, keeps_wheel=False,
+        match_length=sh_loop.SH_MATCH_LENGTH, roster=SH_DEFAULT_SELECTED,
     ),
     "chicken": dict(
         prefix="chk", arena_key="chk_arena", module=chk_loop, inner="play_round",
         fast_forward=chk_loop.fast_forward_chk_match, labels={COOPERATE: "Swerve", DEFECT: "Straight"},
         default="Swerve", play=_chk_move, keeps_wheel=True,
+        match_length=chk_loop.CHK_MATCH_LENGTH, roster=CHK_DEFAULT_SELECTED,
     ),
 }
 
@@ -78,22 +83,28 @@ CASES = [
 ]
 
 
-def _start(concept, prefix) -> AppTest:
+def _start(concept, prefix, keep=None) -> AppTest:
+    """Open the game and start a run; with keep, untick every roster entry not in it first."""
     at = AppTest.from_file(APP_PATH, default_timeout=TIMEOUT)
     at.run()
     at.button(key=f"menu_play_{concept}").click()
     at.run()
+    if keep is not None:
+        for name in GAMES[concept]["roster"]:
+            if name not in keep:
+                at.checkbox(key=f"{prefix}_roster_{name}").uncheck()
+        at.run()
     at.button(key=f"{prefix}_start_run").click()
     at.run()
     assert not at.exception
     return at
 
 
-def _moves_played_out(arena, game, monkeypatch) -> tuple[list, list]:
+def _moves_played_out(arena, game, monkeypatch) -> tuple[list, list, object]:
     """Play the current match out on a copy of the arena.
 
-    Returns the move passed in for each round, and for each round whether the player had thrown the wheel
-    (Chicken only; always False elsewhere).
+    Returns the move passed in for each round, for each round whether the player had thrown the wheel (Chicken only;
+    always False elsewhere), and the copy afterwards.
     """
     played, wheel_thrown = [], []
     real = getattr(game["module"], game["inner"])
@@ -107,7 +118,7 @@ def _moves_played_out(arena, game, monkeypatch) -> tuple[list, list]:
     with monkeypatch.context() as m:
         m.setattr(game["module"], game["inner"], recording)
         game["fast_forward"](clone)
-    return played, wheel_thrown
+    return played, wheel_thrown, clone
 
 
 @pytest.mark.parametrize("concept, first", CASES, ids=[f"{c}-{f or 'no_move_yet'}" for c, f in CASES])
@@ -119,9 +130,12 @@ def test_tooltip_names_the_move_play_out_plays(concept, first, monkeypatch):
         assert not at.exception
 
     tooltip = at.button(key=f"{game['prefix']}_btn_fast_forward").proto.help
-    played, wheel_thrown = _moves_played_out(at.session_state[game["arena_key"]], game, monkeypatch)
+    arena = at.session_state[game["arena_key"]]
+    rounds_left = game["match_length"] - arena.rounds_this_match
+    played, wheel_thrown, clone = _moves_played_out(arena, game, monkeypatch)
 
-    assert played, "playing the match out should play at least one round"
+    assert len(played) == rounds_left, f"play-out should play the {rounds_left} rounds left, played {len(played)}"
+    assert clone.current_opponent_idx == arena.current_opponent_idx + 1, "play-out should end on the match boundary"
     assert len(set(played)) == 1, f"play-out should repeat one move, played {played}"
     label = game["labels"][played[0]]
     other = next(name for name in game["labels"].values() if name != label)
@@ -141,12 +155,24 @@ def test_tooltip_names_the_move_play_out_plays(concept, first, monkeypatch):
         assert "keeps the wheel" in text, tooltip
 
 
+def _tooltip(at, game) -> str:
+    return at.button(key=f"{game['prefix']}_btn_fast_forward").proto.help
+
+
+def _click_play_out(at, game):
+    at.button(key=f"{game['prefix']}_btn_fast_forward").click()
+    at.run()
+    assert not at.exception
+
+
 @pytest.mark.parametrize("concept", sorted(GAMES))
 def test_tooltip_says_where_play_out_goes(concept):
     """At every match of a run the tooltip says what the click leads to: the next opponent, or the end of the run.
 
     Bug this guards: on the last opponent the tooltip still said "then move to the next opponent", but the click ends
-    the run. The expectation comes from playing the match out on a copy of the arena, not from the code under test.
+    the run. Each tooltip is checked against the real click that follows it: before the last opponent the run moves on
+    by exactly one opponent, and on the last one it ends. The last match is part-played first, so the tooltip is also
+    checked in the middle of a match.
     """
     game = GAMES[concept]
     at = _start(concept, game["prefix"])
@@ -154,20 +180,31 @@ def test_tooltip_says_where_play_out_goes(concept):
     assert opponents >= 2, "precondition: a run with a last opponent and an earlier one"
 
     for idx in range(opponents):
-        arena = at.session_state[game["arena_key"]]
-        assert arena.current_opponent_idx == idx
-        tooltip = at.button(key=f"{game['prefix']}_btn_fast_forward").proto.help
-        clone = copy.deepcopy(arena)
-        game["fast_forward"](clone)
+        last = idx == opponents - 1
+        if last:
+            game["play"](game["default"])(at)
+        tooltip = _tooltip(at, game)
 
-        if clone.run_complete:
-            assert idx == opponents - 1
-            assert "finish the run" in tooltip and "next opponent" not in tooltip, tooltip
+        _click_play_out(at, game)
+
+        arena = at.session_state[game["arena_key"]]
+        if last:
+            assert arena.run_complete
+            assert "then finish the run" in tooltip and "next opponent" not in tooltip, tooltip
+            assert f"remaining {game['match_length'] - 1} rounds" in tooltip, tooltip
         else:
-            assert clone.current_opponent_idx == idx + 1
+            assert not arena.run_complete and arena.current_opponent_idx == idx + 1
             assert "then move to the next opponent" in tooltip and "finish the run" not in tooltip, tooltip
 
-        at.button(key=f"{game['prefix']}_btn_fast_forward").click()
-        at.run()
-        assert not at.exception
+
+@pytest.mark.parametrize("concept", sorted(GAMES))
+def test_one_opponent_run_says_finish_the_run(concept):
+    game = GAMES[concept]
+    at = _start(concept, game["prefix"], keep=game["roster"][:1])
+    assert len(at.session_state[game["arena_key"]].bots) == 1, "precondition: a one-opponent roster"
+    tooltip = _tooltip(at, game)
+
+    _click_play_out(at, game)
+
     assert at.session_state[game["arena_key"]].run_complete
+    assert "then finish the run" in tooltip and "next opponent" not in tooltip, tooltip
