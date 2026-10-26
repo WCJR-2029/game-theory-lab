@@ -397,7 +397,10 @@ def fast_forward_sh_match(state: SHArenaState) -> None:
         else COOPERATE
     )
 
-    while state.rounds_this_match < SH_MATCH_LENGTH and not state.run_complete:
+    # Stop on the opponent change: finishing a match resets rounds_this_match, so the
+    # round count alone would play out the whole run.
+    start_idx = state.current_opponent_idx
+    while state.current_opponent_idx == start_idx and not state.run_complete:
         # Phase 1: signal (non-binding; use default)
         submit_signal(state, default_move)
         # Phase 2: commit (actual move)

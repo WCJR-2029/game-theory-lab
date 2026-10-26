@@ -411,7 +411,10 @@ def fast_forward_match(state: ArenaState) -> None:
 
     default_move = state.last_player_actual if state.last_player_actual is not None else COOPERATE
 
-    while state.rounds_this_match < MATCH_LENGTH and not state.run_complete:
+    # Finishing a match resets rounds_this_match and advances the opponent, so stop on the
+    # opponent change; looping on the round count alone played out the whole run.
+    start_idx = state.current_opponent_idx
+    while state.current_opponent_idx == start_idx and not state.run_complete:
         step_round(state, default_move)
 
 

@@ -404,7 +404,10 @@ def fast_forward_chk_match(state: CHKArenaState) -> None:
     # We also need to reset the commit phase so play_round can be called directly.
     default_move = state.last_player_actual if state.last_player_actual is not None else SWERVE
 
-    while state.rounds_this_match < CHK_MATCH_LENGTH and not state.run_complete:
+    # Stop on the opponent change: finishing a match resets rounds_this_match, so the
+    # round count alone would play out the whole run.
+    start_idx = state.current_opponent_idx
+    while state.current_opponent_idx == start_idx and not state.run_complete:
         # Ensure commit phase is resolved as "keep the wheel" so play_round runs
         if not state.commit_decided:
             state.player_committed_this_round = False
