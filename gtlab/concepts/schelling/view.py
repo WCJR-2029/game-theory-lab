@@ -412,7 +412,7 @@ def _render_session_complete(session: SCHSession, progress: dict) -> None:
         )
     elif nudge_state == NudgeState.PROGRESSING:
         st.caption(
-            f"({exp} session{'s' if exp != 1 else ''} completed. "
+            f"({exp} puzzle{'s' if exp != 1 else ''} completed. "
             "Hard mode adds puzzles where salience beats logic - "
             "the most counterintuitive coordination moments.)"
         )

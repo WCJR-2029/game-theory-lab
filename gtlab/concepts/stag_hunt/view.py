@@ -606,7 +606,7 @@ def _render_sh_debrief(arena: SHArenaState, progress: dict) -> None:
         )
     elif nudge_state == NudgeState.PROGRESSING:
         st.caption(
-            f"({exp} run{'s' if exp != 1 else ''} completed. "
+            f"({exp} match{'es' if exp != 1 else ''} completed. "
             "What happens when you add Mystery mode and try to read the announcements?)"
         )
 
