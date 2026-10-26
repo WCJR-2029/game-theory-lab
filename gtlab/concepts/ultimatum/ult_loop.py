@@ -19,10 +19,10 @@ Design notes
 - update_reputation() is called EXACTLY once per round (in advance_round()).
 - ReputationMemory is held per opponent in the arena; when reputation is off,
   None is passed to propose()/respond() so AI ignores history.
-- Dictator rounds are interleaved: every 3rd round (starting from round 3)
-  is a Dictator round when the player is in the responder role.
-  Exact pattern: proposer / responder-ultimatum / proposer / responder-dictator /
-  proposer / responder-ultimatum / …  (simplified cycle of 4).
+- Dictator rounds come on both sides, in a cycle of 4:
+  proposer / responder (Ultimatum) / proposer-dictator / responder-dictator / …
+  As dictator the player decides a split the AI can't refuse (the generosity
+  lesson); as responder in a Dictator round they simply receive.
 """
 
 from __future__ import annotations
@@ -80,14 +80,13 @@ def _role_for_round(round_idx: int) -> str:
 
 
 def _dictator_for_round(round_idx: int) -> bool:
-    """True if this is a Dictator round (responder has no veto).
+    """True if this is a Dictator round (the responder has no veto).
 
-    Dictator rounds occur when the player is responder AND round_idx % 4 == 3.
-    Schedule (0-indexed): P U P D P U P D …
+    Schedule (0-indexed), cycle of 4: you propose, you respond, you decide
+    (Dictator), you receive (Dictator).  An 8-round session has two proposer
+    rounds of each kind, so the debrief can compare what you offered.
     """
-    if _role_for_round(round_idx) != ROLE_RESPONDER:
-        return False
-    return round_idx % 4 == 3
+    return round_idx % 4 in (2, 3)
 
 
 # ---------------------------------------------------------------------------
@@ -170,6 +169,12 @@ class ULTArenaState:
     last_role: Optional[str] = None        # "proposer" or "responder"
     last_dictator: bool = False
     last_nudge_event: Optional[str] = None
+
+    # The player's offers as proposer: (dictator round?, fraction offered), and their
+    # answers as an Ultimatum responder (True = accepted).  Kept whether or not
+    # reputation is on, for the debrief.
+    offer_log: list[tuple[bool, float]] = field(default_factory=list)
+    response_log: list[bool] = field(default_factory=list)
 
     # Pending AI offer (set when player is about to respond)
     pending_offer: Optional[Offer] = None
@@ -266,9 +271,12 @@ def play_proposer_round(arena: ULTArenaState, responder_share: int) -> RoundResu
     )
     opp = current_opponent(arena)
     mem = current_memory(arena)
+    dictator = current_is_dictator(arena)
 
-    ai_accepts = respond(opp.responder_profile, offer, memory=mem)
-    result = resolve_round(offer, responder_accepts=ai_accepts, dictator_mode=False)
+    # In a Dictator round the AI has no veto: the player's split simply stands.
+    ai_accepts = True if dictator else respond(opp.responder_profile, offer, memory=mem)
+    result = resolve_round(offer, responder_accepts=ai_accepts, dictator_mode=dictator)
+    arena.offer_log.append((dictator, offer.responder_fraction))
 
     # Reputation: record the player's generosity as proposer
     if arena.reputation_on:
@@ -278,7 +286,7 @@ def play_proposer_round(arena: ULTArenaState, responder_share: int) -> RoundResu
     arena.player_total += result.proposer_payoff
     arena.last_result = result
     arena.last_role = ROLE_PROPOSER
-    arena.last_dictator = False
+    arena.last_dictator = dictator
 
     # Classify nudge
     from gtlab.ui.nudges import classify_ult_round_event
@@ -306,6 +314,8 @@ def play_responder_round(arena: ULTArenaState, player_accepts: bool) -> RoundRes
 
     dictator = current_is_dictator(arena)
     result = resolve_round(offer, responder_accepts=player_accepts, dictator_mode=dictator)
+    if not dictator:
+        arena.response_log.append(player_accepts)
 
     # Reputation: record the player's rejection/acceptance as responder
     if arena.reputation_on:

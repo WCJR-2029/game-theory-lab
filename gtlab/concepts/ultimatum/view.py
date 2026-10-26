@@ -259,6 +259,20 @@ def _render_outcome(arena: ULTArenaState) -> None:
 
     st.divider()
 
+    if dictator and role == ROLE_PROPOSER:
+        result_banner(
+            "neutral",
+            "Dictator round — your split stood.",
+            f"You gave them {offer.responder_share:,} of {offer.prize:,} tokens "
+            f"({offer.responder_fraction:.0%}). They had no veto.",
+        )
+        col_you, col_them = st.columns(2)
+        with col_you:
+            st.metric("You kept", f"{result.proposer_payoff:,}")
+        with col_them:
+            st.metric("They received", f"{result.responder_payoff:,}")
+        return
+
     if dictator:
         result_banner(
             "neutral",
@@ -324,11 +338,18 @@ def _render_outcome(arena: ULTArenaState) -> None:
 def _render_proposer_panel(arena: ULTArenaState, opp_display: str) -> None:
     """Render the proposer input: slider + submit."""
     prize = arena.prize
-    st.write(f"**Your role: Proposer** — split **{prize:,} tokens** with {opp_display}.")
-    st.caption(
-        "Drag the slider to set how many tokens you offer them. "
-        "They can accept (you both get your shares) or reject (you both get nothing)."
-    )
+    if current_is_dictator(arena):
+        st.write(f"**Your role: Dictator** — split **{prize:,} tokens** with {opp_display}.")
+        st.caption(
+            "Drag the slider to set how many tokens you give them. "
+            "They can't say no this round: whatever you decide stands."
+        )
+    else:
+        st.write(f"**Your role: Proposer** — split **{prize:,} tokens** with {opp_display}.")
+        st.caption(
+            "Drag the slider to set how many tokens you offer them. "
+            "They can accept (you both get your shares) or reject (you both get nothing)."
+        )
 
     # Default offer: a roughly fair split
     default_offer = prize // 2
@@ -550,23 +571,29 @@ def _make_reveal_body(arena: ULTArenaState) -> str:
     """Generate reveal text from the player's actual session behavior."""
     sentences = []
 
-    # Compute proposer generosity from reputation memories
-    total_proposer_rounds = sum(m.rounds_as_proposer for m in arena.reputation_memories)
-    total_offered_fraction = sum(m.total_offered_fraction for m in arena.reputation_memories)
-    mean_generosity = (
-        total_offered_fraction / total_proposer_rounds
-        if total_proposer_rounds > 0 else None
-    )
-
-    # Compute rejection behavior
-    total_responder_rounds = sum(m.rounds_as_responder for m in arena.reputation_memories)
-    total_rejections = sum(m.rejection_count for m in arena.reputation_memories)
+    # From the session's own log, so it works with reputation on or off.  Generosity
+    # here is Ultimatum offers only; Dictator offers are compared against it below.
+    ultimatum_offers = [f for dictator, f in arena.offer_log if not dictator]
+    dictator_offers = [f for dictator, f in arena.offer_log if dictator]
+    mean_generosity = sum(ultimatum_offers) / len(ultimatum_offers) if ultimatum_offers else None
     rejection_rate = (
-        total_rejections / total_responder_rounds
-        if total_responder_rounds > 0 else None
+        arena.response_log.count(False) / len(arena.response_log) if arena.response_log else None
     )
 
-    if mean_generosity is not None:
+    if ultimatum_offers and dictator_offers:
+        mean_dictator = sum(dictator_offers) / len(dictator_offers)
+        gap = (
+            f"When they could say no, you offered {mean_generosity:.0%} on average; "
+            f"when they couldn't, {mean_dictator:.0%}."
+        )
+        if mean_dictator < mean_generosity - 0.05:
+            gap += " You offered less once the veto was gone: part of what you gave before was buying their yes."
+        elif mean_dictator > mean_generosity + 0.05:
+            gap += " You offered more once the veto was gone, with nothing to gain from it."
+        else:
+            gap += " Your offers barely moved when the veto disappeared."
+        sentences.append(gap)
+    elif mean_generosity is not None:
         if mean_generosity >= 0.45:
             sentences.append(
                 "As proposer, you leaned toward equal or near-equal splits — "
