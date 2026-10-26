@@ -146,7 +146,10 @@ class TestScreenHandover:
         assert arena.current_opponent_idx == 1 and arena.rounds_this_match == 0
         page = _texts(at)
         assert "Match over: you 30, Tit for Tat 30" in page
-        assert "copied your last move" not in page
+        from gtlab.ui.nudges import get_nudge_text
+        last_event = at.session_state["pd_last_nudge_key"]
+        assert last_event is not None, "precondition: the last round of match 1 had a note"
+        assert get_nudge_text(last_event)["body"] not in page, "match 1's note should not follow you into match 2"
 
     @pytest.mark.parametrize("concept, prefix", [("iterated_pd", "pd"), ("stag_hunt", "sh"), ("chicken", "chk")])
     def test_play_out_then_shows_match_over(self, concept, prefix):

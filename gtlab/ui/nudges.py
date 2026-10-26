@@ -31,7 +31,7 @@ NUDGE_THRESHOLDS = {
 # These are the moment-of-dynamic identifiers the game loop emits.
 # ---------------------------------------------------------------------------
 
-NUDGE_MIRROR = "mirror"          # Opponent just copied your last move
+NUDGE_MIRROR = "mirror"          # Opponent switched to the move you made last round
 NUDGE_MUTUAL_COOP = "mutual_coop"   # Both cooperated this round
 NUDGE_MUTUAL_DEFECT = "mutual_defect"  # Both defected this round
 NUDGE_BETRAYAL = "betrayal"      # You cooperated; opponent defected
@@ -70,10 +70,10 @@ _NUDGES: dict[str, dict] = {
         ),
     },
     NUDGE_MIRROR: {
-        "headline": "Notice - they just copied your last move.",
+        "headline": "Notice - they just switched to what you played last round.",
         "body": (
             "Some strategies keep score by mirroring back whatever you did. "
-            "That's called Tit for Tat: nice to start, but it reflects your choices back at you."
+            "The best known is Tit for Tat: nice to start, but it reflects your choices back at you."
         ),
     },
     NUDGE_MUTUAL_COOP: {
@@ -762,7 +762,7 @@ def classify_round_event(
 
     Priority order (most interesting first):
       1. Noise flip happened (only if noise is on)
-      2. Opponent mirrored player's last move (Tit-for-Tat dynamic)
+      2. Opponent switched to the move the player made last round (Tit-for-Tat dynamic)
       3. Opponent forgave a defection
       4. Both defected
       5. Both cooperated
@@ -776,9 +776,10 @@ def classify_round_event(
         if intended_player != actual_player:
             return NUDGE_NOISE_FLIP
 
-    # 2. Mirror: opponent's move == player's LAST move (TFT dynamic)
-    if player_last_actual is not None:
-        if opp_actual == player_last_actual:
+    # 2. Mirror: the opponent changed its move to the one the player made last round (TFT
+    #    dynamic).  An opponent who never changes matches the player only by coincidence.
+    if player_last_actual is not None and opp_last_actual is not None:
+        if opp_actual == player_last_actual and opp_actual != opp_last_actual:
             return NUDGE_MIRROR
 
     # 3. Forgiveness: opponent defected last round, cooperated this round

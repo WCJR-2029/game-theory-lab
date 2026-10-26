@@ -231,10 +231,16 @@ class TestClassifyRoundEvent:
         assert result == NUDGE_NOISE_FLIP
 
     def test_mirror_priority_2_no_noise(self):
-        # Opponent mirrored player's last move — no noise
+        # Opponent switched to the move the player made last round — no noise
         from gtlab.ui.nudges import NUDGE_MIRROR
-        result = self._call(COOPERATE, COOPERATE, player_last=COOPERATE)
+        result = self._call(COOPERATE, COOPERATE, player_last=COOPERATE, opp_last=DEFECT)
         assert result == NUDGE_MIRROR
+
+    def test_no_mirror_when_the_opponent_did_not_change(self):
+        # Always the same move "matches" you by coincidence; that is not copying
+        from gtlab.ui.nudges import NUDGE_MIRROR
+        result = self._call(DEFECT, DEFECT, player_last=DEFECT, opp_last=DEFECT)
+        assert result != NUDGE_MIRROR
 
     def test_forgiveness_priority_3(self):
         # Opp defected last round, cooperated this round

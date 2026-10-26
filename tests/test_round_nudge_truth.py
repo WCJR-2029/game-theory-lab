@@ -125,8 +125,11 @@ CHK_CLAIMS = {
 PD_CLAIMS = {
     nudges.NUDGE_NOISE_FLIP: ("A move was flipped by noise.",
                               lambda r: r.noise and r.intended != r.player),
-    nudges.NUDGE_MIRROR: ("they just copied your last move",
-                          lambda r: r.player_last is not None and r.opp == r.player_last),
+    # Copying is only evidence when they changed their own move to match yours; an opponent who always plays
+    # the same move "matches" you by coincidence.
+    nudges.NUDGE_MIRROR: ("they just switched to what you played last round",
+                          lambda r: r.player_last is not None and r.opp == r.player_last
+                          and r.opp_last is not None and r.opp != r.opp_last),
     nudges.NUDGE_FORGIVEN: ("They just let it go.",
                             lambda r: r.player_last == D and r.opp == C),
     nudges.NUDGE_MUTUAL_DEFECT: ("Both defected.", lambda r: r.player == D and r.opp == D),
