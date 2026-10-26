@@ -63,7 +63,7 @@ from gtlab.ui.theme import (
     intro_above_fold,
     transfer_expander,
 )
-from gtlab.ui.utils import ordinal, standings_halves, top_bot_lead
+from gtlab.ui.utils import ordinal, running_total, standings_halves, top_bot_lead
 from gtlab.concepts.stag_hunt.briefing import (
     STORY, HOW_IT_WORKS, WHAT_TO_WATCH, WHY_IT_MATTERS, YOUR_JOB,
 )
@@ -208,7 +208,7 @@ def _render_sh_active_score_line(arena: SHArenaState) -> None:
         display_name = "opponent"
 
     stat_pills_row([
-        ("Total", arena.player_total_score),
+        ("Total", running_total(arena)),
         ("This match vs. " + display_name, f"{arena.player_match_score} — {arena.opp_match_score}"),
         ("Round", f"{arena.rounds_this_match + 1} / {SH_MATCH_LENGTH}"),
     ])

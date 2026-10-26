@@ -67,6 +67,24 @@ def ordinal(n: int) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Running total — the "Total" pill in the three arena games (PD, Stag Hunt,
+# Chicken)
+# ---------------------------------------------------------------------------
+
+
+def running_total(arena) -> int:
+    """Player's total so far: completed matches plus the match in progress.
+
+    player_total_score only grows when a match finishes, so on its own the
+    pill sat at 0 through the whole first match.  Once the run is complete
+    the last match is already in player_total_score and is not added twice.
+    """
+    if arena.run_complete:
+        return arena.player_total_score
+    return arena.player_total_score + arena.player_match_score
+
+
+# ---------------------------------------------------------------------------
 # End-of-run reveal helpers — shared by the three arena debriefs (PD, Stag Hunt,
 # Chicken) so their text agrees with the result banner.
 # ---------------------------------------------------------------------------
