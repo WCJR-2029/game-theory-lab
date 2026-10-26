@@ -208,3 +208,31 @@ def test_one_opponent_run_says_finish_the_run(concept):
 
     assert at.session_state[game["arena_key"]].run_complete
     assert "then finish the run" in tooltip and "next opponent" not in tooltip, tooltip
+
+
+@pytest.mark.parametrize("concept", sorted(GAMES))
+def test_play_out_repeats_the_move_you_chose_not_a_misfire(concept):
+    """With noise on, your last move can misfire. Play-out repeats the move you chose, and the tooltip names it.
+
+    Bug this guards: play-out repeated your last *actual* move, so after a misfire it kept playing a move you never
+    picked.
+    """
+    from gtlab.ui.utils import play_out_help
+
+    if concept == "iterated_pd":
+        state = game_loop.init_arena(list(game_loop.DEFAULT_SELECTED), noise=1.0, mystery_mode=False)
+        game_loop.step_round(state, COOPERATE)
+        chosen_next = game_loop.fast_forward_move(state)
+    elif concept == "stag_hunt":
+        state = sh_loop.init_sh_arena(list(SH_DEFAULT_SELECTED), noise=1.0, mystery_mode=False)
+        sh_loop.submit_signal(state, COOPERATE)
+        sh_loop.commit_move(state, COOPERATE)
+        chosen_next = sh_loop.fast_forward_sh_move(state)
+    else:
+        state = chk_loop.init_chk_arena(list(CHK_DEFAULT_SELECTED), noise=1.0, mystery_mode=False)
+        chk_loop.decide_commit(state, False)
+        chk_loop.play_round(state, COOPERATE)
+        chosen_next = chk_loop.fast_forward_chk_move(state)
+
+    assert state.last_player_actual == DEFECT, "precondition: at full noise the chosen move misfired"
+    assert chosen_next == COOPERATE

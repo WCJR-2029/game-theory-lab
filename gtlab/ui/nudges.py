@@ -53,6 +53,7 @@ SH_NUDGE_NOISE_COLLAPSE = "sh_noise_collapse"   # A noise flip broke a trusting 
 SH_NUDGE_ROUND_START = "sh_round_start"         # First-round context for Stag Hunt
 SH_NUDGE_MUTUAL_HARE = "sh_mutual_hare"         # Both played Hare — the safe equilibrium
 SH_NUDGE_STAG_ABANDONED = "sh_stag_abandoned"   # Player went Stag; opponent went Hare
+SH_NUDGE_MISFIRE = "sh_misfire"                 # A move misfired (not the player's Stag slipping to Hare)
 SH_NUDGE_YOU_BLUFFED = "sh_you_bluffed"         # Player said Stag, went Hare; opponent said Stag, went Stag
 SH_NUDGE_THEY_HUNTED_ALONE = "sh_they_hunted_alone"  # Player said Hare, went Hare; opponent said Stag, went Stag
 
@@ -217,6 +218,14 @@ _SH_NUDGES: dict[str, dict] = {
             "is worth the chance of this."
         ),
     },
+    SH_NUDGE_MISFIRE: {
+        "headline": "A move misfired.",
+        "body": (
+            "Noise flipped a move this round, so the result isn't what was chosen. "
+            "To a strategy watching actual moves, a misfire looks exactly like a choice — "
+            "a broken promise, or a kept one. Notice how you read this one."
+        ),
+    },
     SH_NUDGE_YOU_BLUFFED: {
         "headline": "You said Stag. You went Hare.",
         "body": (
@@ -253,8 +262,12 @@ def classify_sh_round_event(
     actual_player: object | None,
     opp_last_actual: object | None,
     player_last_actual: object | None,
+    opp_flipped: bool = False,
 ) -> str | None:
     """Classify the most salient Stag Hunt nudge event for a just-completed round.
+
+    The notes after the noise ones read a choice into the moves ("they kept their word"),
+    so a round where either move misfired gets a misfire note instead.
 
     Priority order:
       1. Noise flip that disrupted cooperation (noise collapse)
@@ -268,9 +281,12 @@ def classify_sh_round_event(
     from gtlab.engine import COOPERATE, DEFECT  # local import avoids circular
 
     # 1. Noise collapse: noise flipped a move that was intended as Stag
-    if noise_active and intended_player is not None and actual_player is not None:
-        if intended_player != actual_player and intended_player == COOPERATE:
-            return SH_NUDGE_NOISE_COLLAPSE
+    player_flipped = intended_player is not None and actual_player is not None and intended_player != actual_player
+    if noise_active and player_flipped and intended_player == COOPERATE:
+        return SH_NUDGE_NOISE_COLLAPSE
+    # Any other misfire, on either side
+    if noise_active and (player_flipped or opp_flipped):
+        return SH_NUDGE_MISFIRE
 
     # 2. Bluff detected: opponent announced Stag, played Hare
     if opp_announced == COOPERATE and opp_actual == DEFECT:
@@ -312,6 +328,7 @@ CHK_NUDGE_MUTUAL_SWERVE = "chk_mutual_swerve"
 CHK_NUDGE_VS_HAWK = "chk_vs_hawk"
 CHK_NUDGE_ROUND_START = "chk_round_start"
 CHK_NUDGE_PLAYER_COMMITTED_OPP_SWERVED = "chk_player_committed_won"
+CHK_NUDGE_MISFIRE = "chk_misfire"  # A move that wasn't locked in misfired
 
 # ---------------------------------------------------------------------------
 # Chicken nudge copy — feel first, name after
@@ -370,6 +387,14 @@ _CHK_NUDGES: dict[str, dict] = {
             "not because it feels good, but because the alternative is worse."
         ),
     },
+    CHK_NUDGE_MISFIRE: {
+        "headline": "A move misfired.",
+        "body": (
+            "Noise flipped a move that wasn't locked in, so this round's result isn't what was chosen. "
+            "A thrown wheel can't misfire; a kept one can. "
+            "Notice how that changes what commitment is worth."
+        ),
+    },
     CHK_NUDGE_PLAYER_COMMITTED_OPP_SWERVED: {
         "headline": "You threw the wheel. They swerved.",
         "body": (
@@ -395,8 +420,13 @@ def classify_chk_round_event(
     noise_active: bool,
     intended_player: object | None,
     actual_player: object | None,
+    opp_flipped: bool = False,
 ) -> str | None:
-    """Classify the most salient Chicken nudge event for a just-completed round."""
+    """Classify the most salient Chicken nudge event for a just-completed round.
+
+    The later notes read a choice into the moves ("chose the only rational response"),
+    so a round where an uncommitted move misfired gets a misfire note instead.
+    """
     from gtlab.engine import COOPERATE, DEFECT  # local import avoids circular
     SWERVE = COOPERATE
     STRAIGHT = DEFECT
@@ -404,6 +434,11 @@ def classify_chk_round_event(
     # 1. Both committed — both go Straight — crash with commitment context
     if player_committed and opp_committed:
         return CHK_NUDGE_MUTUAL_COMMIT_CRASH
+
+    # A move that wasn't locked in misfired (committed moves never do)
+    player_flipped = intended_player is not None and actual_player is not None and intended_player != actual_player
+    if noise_active and (player_flipped or opp_flipped):
+        return CHK_NUDGE_MISFIRE
 
     # 2. Mutual crash (at least one wasn't committed but both ended Straight)
     if player_actual == STRAIGHT and opp_actual == STRAIGHT:
@@ -755,6 +790,7 @@ def classify_round_event(
     noise_active: bool,
     intended_player: object | None,  # Move — None if not tracking
     actual_player: object | None,    # Move — None if not tracking
+    opp_flipped: bool = False,       # the opponent's move misfired
 ) -> str | None:
     """Classify the most salient nudge event for a just-completed round.
 
@@ -771,10 +807,11 @@ def classify_round_event(
     """
     from gtlab.engine import COOPERATE, DEFECT  # local import avoids circular
 
-    # 1. Noise flip - only surface if noise is active
-    if noise_active and intended_player is not None and actual_player is not None:
-        if intended_player != actual_player:
-            return NUDGE_NOISE_FLIP
+    # 1. Noise flip, on either side - only surface if noise is active.  The later notes read a
+    #    choice into the moves ("they let it go"), which a misfire would make false.
+    player_flipped = intended_player is not None and actual_player is not None and intended_player != actual_player
+    if noise_active and (player_flipped or opp_flipped):
+        return NUDGE_NOISE_FLIP
 
     # 2. Mirror: the opponent changed its move to the one the player made last round (TFT
     #    dynamic).  An opponent who never changes matches the player only by coincidence.

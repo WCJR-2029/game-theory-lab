@@ -11,8 +11,9 @@ each nudge, a phrase from its copy and the facts that phrase asserts about the r
 commitments. One test checks those facts hold for every round that gets the nudge; the other checks each phrase is
 still in the copy, so the table cannot drift from the text.
 
-What they do not check: the rest of each copy, claims about intent (the classifiers cannot see a noise flip of the
-opponent's move, so a misfire reads the same as a choice) and claims about theory (whether an outcome is stable).
+Noise: a move can misfire, on either side. Every note that reads a choice into the moves ("they kept their word",
+"they let it go", "chose the only rational response") is only allowed when no move misfired; misfired rounds get a
+misfire note instead. Not checked here: the rest of each copy, and claims about theory (tests/test_theory_claims.py).
 """
 
 from __future__ import annotations
@@ -31,11 +32,11 @@ STAG, HARE = C, D
 SWERVE, STRAIGHT = C, D
 
 
-def _sh(player, opp, player_said, opp_said, noise=False, intended=None):
+def _sh(player, opp, player_said, opp_said, noise=False, intended=None, opp_flipped=False):
     return nudges.classify_sh_round_event(
         player_actual=player, opp_actual=opp, player_announced=player_said, opp_announced=opp_said,
         noise_active=noise, intended_player=player if intended is None else intended, actual_player=player,
-        opp_last_actual=None, player_last_actual=None,
+        opp_last_actual=None, player_last_actual=None, opp_flipped=opp_flipped,
     )
 
 
@@ -123,8 +124,7 @@ CHK_CLAIMS = {
 }
 
 PD_CLAIMS = {
-    nudges.NUDGE_NOISE_FLIP: ("A move was flipped by noise.",
-                              lambda r: r.noise and r.intended != r.player),
+    nudges.NUDGE_NOISE_FLIP: ("A move was flipped by noise.", lambda r: _misfire(r)),
     # Copying is only evidence when they changed their own move to match yours; an opponent who always plays
     # the same move "matches" you by coincidence.
     nudges.NUDGE_MIRROR: ("they just switched to what you played last round",
@@ -140,18 +140,35 @@ PD_CLAIMS = {
 
 
 def _noise_cases(player):
-    """(noise_active, intended) pairs: with noise off you always play what you intended."""
-    yield False, player
-    for intended in (C, D):
-        yield True, intended
+    """(noise_active, your intended move, their move misfired): with noise off nothing misfires."""
+    yield False, player, False
+    for intended, opp_flipped in itertools.product((C, D), (False, True)):
+        yield True, intended, opp_flipped
+
+
+def _misfire(r) -> bool:
+    """A move misfired this round: yours (you meant something else) or theirs."""
+    return r.noise and (r.intended != r.player or r.opp_flipped)
+
+
+def _without_misfire(claims, noise_events):
+    """Every note except the noise ones reads a choice into the moves, so it is only true when nothing misfired."""
+    return {e: (s, h if e in noise_events else (lambda r, h=h: not _misfire(r) and h(r)))
+            for e, (s, h) in claims.items()}
+
+
+SH_CLAIMS = _without_misfire(
+    {**SH_CLAIMS, "sh_misfire": ("A move misfired.", _misfire)}, {nudges.SH_NUDGE_NOISE_COLLAPSE, "sh_misfire"})
+CHK_CLAIMS = _without_misfire({**CHK_CLAIMS, "chk_misfire": ("A move misfired.", _misfire)}, {"chk_misfire"})
+PD_CLAIMS = _without_misfire(PD_CLAIMS, {nudges.NUDGE_NOISE_FLIP})
 
 
 def _sh_rounds():
     for player, opp, player_said, opp_said in itertools.product((C, D), repeat=4):
-        for noise, intended in _noise_cases(player):
+        for noise, intended, opp_flipped in _noise_cases(player):
             r = SimpleNamespace(player=player, opp=opp, player_said=player_said, opp_said=opp_said,
-                                noise=noise, intended=intended)
-            yield r, _sh(player, opp, player_said, opp_said, noise, intended)
+                                noise=noise, intended=intended, opp_flipped=opp_flipped)
+            yield r, _sh(player, opp, player_said, opp_said, noise, intended, opp_flipped)
 
 
 def _chk_rounds():
@@ -159,26 +176,27 @@ def _chk_rounds():
         # Throwing the wheel locks you to Straight, and noise never flips a committed move.
         if (p_commit and player != STRAIGHT) or (o_commit and opp != STRAIGHT):
             continue
-        for noise, intended in _noise_cases(player):
-            if p_commit and intended != player:
+        for noise, intended, opp_flipped in _noise_cases(player):
+            if (p_commit and intended != player) or (o_commit and opp_flipped):
                 continue
             r = SimpleNamespace(player=player, opp=opp, p_commit=p_commit, o_commit=o_commit, hawk=hawk,
-                                noise=noise, intended=intended)
+                                noise=noise, intended=intended, opp_flipped=opp_flipped)
             yield r, nudges.classify_chk_round_event(
                 player_actual=player, opp_actual=opp, player_committed=p_commit, opp_committed=o_commit,
                 opp_is_hawk=hawk, noise_active=noise, intended_player=intended, actual_player=player,
+                opp_flipped=opp_flipped,
             )
 
 
 def _pd_rounds():
     lasts = [(None, None)] + list(itertools.product((C, D), repeat=2))
     for (player_last, opp_last), player, opp in itertools.product(lasts, (C, D), (C, D)):
-        for noise, intended in _noise_cases(player):
+        for noise, intended, opp_flipped in _noise_cases(player):
             r = SimpleNamespace(player=player, opp=opp, player_last=player_last, opp_last=opp_last,
-                                noise=noise, intended=intended)
+                                noise=noise, intended=intended, opp_flipped=opp_flipped)
             yield r, nudges.classify_round_event(
                 player_actual=player, opp_actual=opp, opp_last_actual=opp_last, player_last_actual=player_last,
-                noise_active=noise, intended_player=intended, actual_player=player,
+                noise_active=noise, intended_player=intended, actual_player=player, opp_flipped=opp_flipped,
             )
 
 

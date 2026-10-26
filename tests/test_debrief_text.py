@@ -156,3 +156,34 @@ class TestMiddleRankIsNotLow:
         text = _make_reveal_body(_rows([HUMAN_LABEL] + rest + ["Always Defect"]))
         ad = [s for s in _sentences(text) if "Always Defect" in s]
         assert len(ad) == 1 and "sank" in ad[0], text
+
+
+class TestChickenDoveSentences:
+    """Dove's debrief sentences said it "avoided all the crashes" / was "never crashing". With noise on, a Dove's
+    swerve can misfire into Straight and crash, so those claims can be false. The sentences now talk about what Dove
+    chooses (it never picks Straight), which noise can't change."""
+
+    def test_dove_can_crash_with_noise_on(self):
+        from gtlab.concepts.chicken.chk_loop import init_chk_arena, decide_commit, play_round
+        from gtlab.engine import COOPERATE, DEFECT
+        state = init_chk_arena(["Dove"], noise=1.0, mystery_mode=False)
+        decide_commit(state, False)
+        result = play_round(state, COOPERATE)  # at full noise both swerves misfire into Straight
+        assert result["player_actual"] == result["opp_actual"] == DEFECT, "precondition: a misfired Dove crashes"
+
+    def test_dove_always_chooses_to_swerve(self):
+        from gtlab.concepts.chicken.strategies import CHK_STRATEGY_CLASSES
+        from gtlab.engine import COOPERATE, DEFECT
+        dove = CHK_STRATEGY_CLASSES["Dove"]()
+        for history in ([], [(DEFECT, DEFECT)], [(COOPERATE, DEFECT)] * 5, [(DEFECT, COOPERATE)] * 3):
+            assert dove.choose(history) == COOPERATE
+
+    @pytest.mark.parametrize("order", [["Dove"], "dove_last"])
+    def test_dove_sentences_claim_choices_not_outcomes(self, order):
+        names = list(CHK_DEFAULT_SELECTED)
+        rows = _rows(["Dove", HUMAN_LABEL] + [n for n in names if n != "Dove"]) if order == ["Dove"] else \
+            _rows([HUMAN_LABEL] + [n for n in names if n != "Dove"] + ["Dove"])
+        text = _make_chk_reveal_body(rows, None)
+        assert "Dove" in text, text
+        for outcome_claim in ("avoided all the crashes", "never crashing"):
+            assert outcome_claim not in text, text

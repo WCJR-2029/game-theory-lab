@@ -55,9 +55,9 @@ These were captured during playtest but are NOT blocking — deprioritized after
 - **Phase 4 — Schelling:** `_render_focal_distribution` uses text `█` bars → `st.progress` per answer; `num_any_positive` could add a "try 1, 7, 100…" hint. Partner-draw randomization deferred (existing weighted draw is acceptable).
 - **Phase 5 — Ultimatum & Dictator:** opponent cycling is a simple 2-round rotation (allow picking specific opponent); coarse split granularity at million stake; reputation reveal green/amber/red indicator; session length hardcoded at 8.
 - **Phase 6 — Matching Pennies & RPS:** game selector lives in sidebar; a more prominent "choose your game" moment on setup screen.
-- **Noise and the 2x2 games (found 2026-10, design calls):**
-  - "Play out this match" repeats your last *actual* move, so after noise flips your move it repeats the flipped one. The tooltip names that move truthfully; repeating your last *chosen* move may be the better rule.
-  - The round classifiers see your own noise flip but not the opponent's, so two nudges can read intent into a misfire. Stag Hunt's "cheap talk" nudge fires when a bot that always hunts Stag is flipped to Hare, and Chicken's "You threw the wheel. They swerved ... chose the only rational response" fires when Hawk is flipped to Swerve. Fixing it means passing the opponent's flip to the classifiers and writing misfire copy.
+- **Noise and the 2x2 games (found 2026-10): DONE.** Play-out repeats the move you chose, not a misfire. The round
+  classifiers see the opponent's flip too, and a misfired round gets a misfire note instead of one that reads a choice
+  into it. Chicken's Dove debrief lines talk about what Dove chooses, which noise can't change.
 
 ---
 

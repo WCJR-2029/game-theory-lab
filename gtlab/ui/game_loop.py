@@ -308,6 +308,7 @@ def step_round(state: ArenaState, player_move: Move) -> dict:
         noise_active=state.noise > 0.0,
         intended_player=intended_player,
         actual_player=actual_player,
+        opp_flipped=opp_flipped,
     )
 
     # Special case: grudge lockdown detection
@@ -403,8 +404,11 @@ def _finalize_match(state: ArenaState) -> None:
 
 
 def fast_forward_move(state: ArenaState) -> Move:
-    """The move "Play out this match" plays: your last move, or COOPERATE before your first."""
-    return state.last_player_actual if state.last_player_actual is not None else COOPERATE
+    """The move "Play out this match" plays: the move you last chose in this match, or COOPERATE before your first.
+
+    The move you chose, not what noise turned it into: repeating a misfire would play a move you never picked.
+    """
+    return state.last_intended_player if state.last_player_actual is not None else COOPERATE
 
 
 def fast_forward_match(state: ArenaState) -> None:

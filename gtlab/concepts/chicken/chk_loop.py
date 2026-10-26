@@ -117,6 +117,7 @@ class CHKArenaState:
     last_player_committed: bool = False
     last_opp_committed: bool = False
     last_player_actual: Optional[Move] = None
+    last_intended_player: Optional[Move] = None  # what you chose, before any noise flip
     last_opp_actual: Optional[Move] = None
     last_noise_flipped: bool = False
     last_nudge_event: Optional[str] = None
@@ -305,6 +306,7 @@ def play_round(state: CHKArenaState, player_move: Move) -> dict:
         noise_active=state.noise > 0.0,
         intended_player=intended_player,
         actual_player=actual_player,
+        opp_flipped=opp_flipped,
     )
 
     # Update histories
@@ -320,6 +322,7 @@ def play_round(state: CHKArenaState, player_move: Move) -> dict:
     state.last_player_committed = player_committed
     state.last_opp_committed = opp_committed
     state.last_player_actual = actual_player
+    state.last_intended_player = intended_player
     state.last_opp_actual = actual_opp
     state.last_noise_flipped = player_flipped or opp_flipped
     state.last_nudge_event = nudge_event
@@ -397,8 +400,9 @@ def _finalize_chk_match(state: CHKArenaState) -> None:
 
 
 def fast_forward_chk_move(state: CHKArenaState) -> Move:
-    """The move "Play out this match" plays: your last move, or SWERVE before your first."""
-    return state.last_player_actual if state.last_player_actual is not None else SWERVE
+    """The move "Play out this match" plays: the move you last chose in this match, or SWERVE before your first.
+    The move you chose, not what noise turned it into."""
+    return state.last_intended_player if state.last_player_actual is not None else SWERVE
 
 
 def fast_forward_chk_match(state: CHKArenaState) -> None:

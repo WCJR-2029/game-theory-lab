@@ -296,6 +296,7 @@ def commit_move(state: SHArenaState, player_commit: Move) -> dict:
         actual_player=actual_player,
         opp_last_actual=state.last_opp_actual,
         player_last_actual=state.last_player_actual,
+        opp_flipped=opp_flipped,
     )
 
     # Update last-round tracking
@@ -381,8 +382,9 @@ def _finalize_sh_match(state: SHArenaState) -> None:
 
 
 def fast_forward_sh_move(state: SHArenaState) -> Move:
-    """The move "Play out this match" plays: your last move, or COOPERATE (Stag) before your first."""
-    return state.last_player_actual if state.last_player_actual is not None else COOPERATE
+    """The move "Play out this match" plays: the move you last chose in this match, or COOPERATE (Stag) before your
+    first.  The move you chose, not what noise turned it into."""
+    return state.last_intended_player if state.last_player_actual is not None else COOPERATE
 
 
 def fast_forward_sh_match(state: SHArenaState) -> None:

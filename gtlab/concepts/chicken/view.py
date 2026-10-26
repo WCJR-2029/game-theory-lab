@@ -546,7 +546,7 @@ def _make_chk_reveal_body(rows: list[dict], arena: CHKArenaState) -> str:
             )
         elif top_bot["name"] == dove_name:
             sentences.append(
-                f"{top_bot_lead(rows, 'Dove')} — consistent yielding avoided all the crashes "
+                f"{top_bot_lead(rows, 'Dove')} — consistent yielding never steered it into a crash "
                 "while the more aggressive strategies collided."
             )
         else:
@@ -568,8 +568,8 @@ def _make_chk_reveal_body(rows: list[dict], arena: CHKArenaState) -> str:
 
     if dove_name in bottom_half_names:
         sentences.append(
-            "Dove finished low — always swerving meant never crashing, "
-            "but also never winning a round against anyone willing to hold Straight."
+            "Dove finished low — always swerving meant it never chose a collision, "
+            "but also never pressed for a win against anyone willing to hold Straight."
         )
 
     if not sentences:
