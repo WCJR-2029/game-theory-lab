@@ -36,8 +36,8 @@ def test_schedule_has_dictator_rounds_on_both_sides():
     assert (ROLE_PROPOSER, True) in schedule, "you should decide a split in at least one Dictator round"
     assert (ROLE_RESPONDER, True) in schedule
     assert (ROLE_PROPOSER, False) in schedule and (ROLE_RESPONDER, False) in schedule
-    proposer_modes = [d for role, d in schedule if role == ROLE_PROPOSER]
-    assert proposer_modes.count(True) >= 2 and proposer_modes.count(False) >= 2, "enough rounds of each to compare"
+    cycle = [(ROLE_PROPOSER, False), (ROLE_RESPONDER, False), (ROLE_PROPOSER, True), (ROLE_RESPONDER, True)]
+    assert schedule == cycle * 2, schedule
 
 
 def test_briefing_dictator_line_describes_a_round_that_happens():

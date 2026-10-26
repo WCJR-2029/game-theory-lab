@@ -236,3 +236,19 @@ def test_play_out_repeats_the_move_you_chose_not_a_misfire(concept):
 
     assert state.last_player_actual == DEFECT, "precondition: at full noise the chosen move misfired"
     assert chosen_next == COOPERATE
+
+
+def test_after_a_misfire_the_app_names_and_plays_the_move_you_chose(monkeypatch):
+    game = GAMES["iterated_pd"]
+    at = _start("iterated_pd", "pd")
+    at.session_state["pd_arena"].noise = 1.0  # every move misfires
+    at.button(key="pd_btn_cooperate").click()
+    at.run()
+    arena = at.session_state["pd_arena"]
+    assert arena.last_player_actual == DEFECT, "precondition: your Cooperate misfired"
+
+    tooltip = at.button(key="pd_btn_fast_forward").proto.help
+    played, _, _ = _moves_played_out(arena, game, monkeypatch)
+
+    assert "repeats your last move (cooperate)" in tooltip.lower(), tooltip
+    assert set(played) == {COOPERATE}, "play-out passes the chosen move in every round; noise may still flip it"

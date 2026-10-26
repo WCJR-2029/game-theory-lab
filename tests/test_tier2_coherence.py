@@ -15,6 +15,8 @@ from __future__ import annotations
 import subprocess
 
 import pytest
+
+from gtlab.concepts.registry import CONCEPTS
 from streamlit.testing.v1 import AppTest
 
 APP_PATH = "app.py"
@@ -89,57 +91,14 @@ class TestMenuProgression:
         for key in expected:
             assert key in btn_keys, f"{key} not found. Button keys: {btn_keys}"
 
-    def test_menu_markdown_contains_pd_progression_phrase(self):
-        """The PD connective-tissue line should appear in the rendered markdown."""
+    @pytest.mark.parametrize("concept_key", [c["key"] for c in CONCEPTS])
+    def test_menu_shows_each_cards_progression_line(self, concept_key):
+        """Each card's connective-tissue line appears in full on the rendered menu."""
         at = _at_menu()
         assert not at.exception
         all_md = " ".join(m.value for m in at.markdown)
-        # Key words from PD's progression field
-        assert "dilemma" in all_md.lower() or "cooperate or betray" in all_md.lower(), (
-            f"PD progression phrase not found in markdown. "
-            f"First 500 chars: {all_md[:500]}"
-        )
-
-    def test_menu_markdown_contains_stag_hunt_progression_phrase(self):
-        at = _at_menu()
-        assert not at.exception
-        all_md = " ".join(m.value for m in at.markdown)
-        # Key word from Stag Hunt's progression
-        assert "talk" in all_md.lower() or "announce" in all_md.lower(), (
-            f"Stag Hunt progression phrase not found. First 500 chars: {all_md[:500]}"
-        )
-
-    def test_menu_markdown_contains_chicken_progression_phrase(self):
-        at = _at_menu()
-        assert not at.exception
-        all_md = " ".join(m.value for m in at.markdown)
-        assert "threat" in all_md.lower() or "take back" in all_md.lower(), (
-            f"Chicken progression phrase not found. First 500 chars: {all_md[:500]}"
-        )
-
-    def test_menu_markdown_contains_schelling_progression_phrase(self):
-        at = _at_menu()
-        assert not at.exception
-        all_md = " ".join(m.value for m in at.markdown)
-        assert "conflict" in all_md.lower() or "same answer" in all_md.lower(), (
-            f"Schelling progression phrase not found. First 500 chars: {all_md[:500]}"
-        )
-
-    def test_menu_markdown_contains_ultimatum_progression_phrase(self):
-        at = _at_menu()
-        assert not at.exception
-        all_md = " ".join(m.value for m in at.markdown)
-        assert "proposes" in all_md.lower() or "punish" in all_md.lower(), (
-            f"Ultimatum progression phrase not found. First 500 chars: {all_md[:500]}"
-        )
-
-    def test_menu_markdown_contains_mixed_strategies_progression_phrase(self):
-        at = _at_menu()
-        assert not at.exception
-        all_md = " ".join(m.value for m in at.markdown)
-        assert "every move has a counter" in all_md.lower(), (
-            f"Mixed Strategies progression phrase not found. First 500 chars: {all_md[:500]}"
-        )
+        line = next(c["progression"] for c in CONCEPTS if c["key"] == concept_key)
+        assert line in all_md, f"{concept_key}: {line!r} not on the menu"
 
     def test_menu_markdown_contains_2x2_kinship_note(self):
         """The menu should mention the shared 2x2 engine for the first three."""

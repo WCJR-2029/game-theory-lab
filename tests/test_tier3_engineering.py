@@ -280,10 +280,8 @@ class TestClassifyRoundEvent:
         result = self._call(DEFECT, COOPERATE)
         assert result == NUDGE_SUCKER
 
-    def test_no_event_when_nothing_interesting(self):
-        # No previous move, no noise — classify_round_event returns None
-        # when none of the 7 priority conditions match (can't happen with real moves)
-        # but test that returning None is possible path (when no prior move for mirror)
+    def test_betrayal_fires_without_history(self):
+        # No previous move, no noise: the betrayal note still fires (every real move pair gets a note)
         from gtlab.ui.nudges import classify_round_event, NUDGE_BETRAYAL
         result = self._call(COOPERATE, DEFECT, player_last=None)
         # betrayal path should still fire
@@ -579,7 +577,7 @@ _CONCEPT_PLAY_SEQUENCES = [
     ("chicken", ["chk_start_run", "chk_btn_keep_wheel", "chk_btn_swerve"]),
     ("schelling", ["sch_start_session"]),   # submit key is dynamic; handled below
     ("ultimatum", ["ult_start_session", "ult_btn_propose"]),
-    ("mixed_strategies", []),              # entry only — MS has no single start button
+    ("mixed_strategies", ["mp_start_btn", "mp_btn_Heads"]),
 ]
 
 
@@ -620,6 +618,7 @@ def test_each_registry_concept_enters_and_plays(concept_key, button_sequence):
     if concept_key == "schelling":
         btn_keys = [b.key for b in at.button]
         submit_key = next((k for k in btn_keys if k.startswith("sch_submit_")), None)
+        assert submit_key, f"schelling: no submit button after starting. Available: {btn_keys}"
         if submit_key:
             at.button(key=submit_key).click()
             at.run()

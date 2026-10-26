@@ -187,3 +187,5 @@ class TestChickenDoveSentences:
         assert "Dove" in text, text
         for outcome_claim in ("avoided all the crashes", "never crashing"):
             assert outcome_claim not in text, text
+        choice_claim = "never steered it into a crash" if order == ["Dove"] else "never chose a collision"
+        assert choice_claim in text, text

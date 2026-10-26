@@ -12,7 +12,6 @@ Bugs this guards:
 
 from __future__ import annotations
 
-import inspect
 import re
 
 import pytest
@@ -33,9 +32,11 @@ def _all_text(module) -> str:
 @pytest.mark.parametrize("module, length", [
     (pd_briefing, MATCH_LENGTH), (sh_briefing, SH_MATCH_LENGTH), (chk_briefing, CHK_MATCH_LENGTH),
 ])
-def test_every_round_count_is_the_match_length(module, length):
+def test_every_stated_round_count_is_the_match_length(module, length):
     counts = [int(n) for n in re.findall(r"(\d+) (?:rounds|times)", _all_text(module))]
     assert all(n == length for n in counts), f"{module.__name__} says {counts}; a match is {length} rounds"
+    if module is not sh_briefing:  # Stag Hunt's briefing doesn't state a count
+        assert counts, f"{module.__name__} should say how long a match is"
 
 
 def test_chicken_says_what_you_know_when_you_choose():
@@ -49,9 +50,17 @@ def test_stag_hunt_announcements_are_made_together():
 
     assert "you and your opponent each announce" in sh_briefing.HOW_IT_WORKS
     assert "First, your opponent announces" not in sh_briefing.HOW_IT_WORKS
-    for cls in SH_STRATEGY_CLASSES.values():
-        params = list(inspect.signature(cls.signal).parameters)
-        assert params == ["self", "history"], f"{cls.__name__}.signal should not see your announcement: {params}"
+    from gtlab.concepts.stag_hunt.sh_loop import init_sh_arena, submit_signal
+    from gtlab.engine import COOPERATE, DEFECT
+
+    for name in SH_STRATEGY_CLASSES:
+        for yours in (COOPERATE, DEFECT):
+            state = init_sh_arena([name], noise=0.0, mystery_mode=False)
+            bot, seen = state.bots[0], []
+            real_signal = bot.signal
+            bot.signal = lambda *args, **kwargs: (seen.append((args, kwargs)), real_signal(*args, **kwargs))[1]
+            submit_signal(state, yours)
+            assert seen == [((state.opp_history,), {})], f"{name} should see only its history, got {seen}"
 
 
 def test_schelling_hard_mode_line_matches_the_bank():
@@ -60,6 +69,9 @@ def test_schelling_hard_mode_line_matches_the_bank():
     text = sch_briefing.HOW_IT_WORKS
     assert "almost every time" not in text
     assert "draws fewer matches than the obvious one" in text
+    from gtlab.concepts.schelling.model import check_match
+    from gtlab.concepts.schelling.sch_loop import answer_weights
     for p in bank.focal_vs_logic_puzzles():
-        d = p.focal_distribution
-        assert d.get(p.logical_decoy, 0) < max(d.values()), p.id
+        groups = answer_weights(p)
+        decoy = sum(w for a, w in groups if check_match(p, a, p.logical_decoy))
+        assert 0 < decoy < max(w for _, w in groups), p.id
