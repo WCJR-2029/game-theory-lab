@@ -147,7 +147,7 @@ def test_tooltip_names_the_move_play_out_plays(concept, first, monkeypatch):
 
     text = tooltip.lower()
     if first is None:
-        assert f"plays {label.lower()}, since you haven't moved yet" in text, tooltip
+        assert f"plays {label.lower()}, since you haven't moved in this match yet" in text, tooltip
     else:
         assert f"repeats your last move ({label.lower()})" in text, tooltip
     assert other.lower() not in text, f"the tooltip should name only the move it plays: {tooltip}"

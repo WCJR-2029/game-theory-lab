@@ -112,7 +112,7 @@ def play_out_help(
     if has_moved:
         move = f"repeats your last move ({move_label})"
     else:
-        move = f"plays {move_label}, since you haven't moved yet"
+        move = f"plays {move_label}, since you haven't moved in this match yet"
     if keeps_wheel:
         move = f"keeps the wheel and {move}"
     then = "finish the run" if last_match else "move to the next opponent"
