@@ -139,3 +139,35 @@ def test_tooltip_names_the_move_play_out_plays(concept, first, monkeypatch):
     assert other.lower() not in text, f"the tooltip should name only the move it plays: {tooltip}"
     if game["keeps_wheel"]:
         assert "keeps the wheel" in text, tooltip
+
+
+@pytest.mark.parametrize("concept", sorted(GAMES))
+def test_tooltip_says_where_play_out_goes(concept):
+    """At every match of a run the tooltip says what the click leads to: the next opponent, or the end of the run.
+
+    Bug this guards: on the last opponent the tooltip still said "then move to the next opponent", but the click ends
+    the run. The expectation comes from playing the match out on a copy of the arena, not from the code under test.
+    """
+    game = GAMES[concept]
+    at = _start(concept, game["prefix"])
+    opponents = len(at.session_state[game["arena_key"]].bots)
+    assert opponents >= 2, "precondition: a run with a last opponent and an earlier one"
+
+    for idx in range(opponents):
+        arena = at.session_state[game["arena_key"]]
+        assert arena.current_opponent_idx == idx
+        tooltip = at.button(key=f"{game['prefix']}_btn_fast_forward").proto.help
+        clone = copy.deepcopy(arena)
+        game["fast_forward"](clone)
+
+        if clone.run_complete:
+            assert idx == opponents - 1
+            assert "finish the run" in tooltip and "next opponent" not in tooltip, tooltip
+        else:
+            assert clone.current_opponent_idx == idx + 1
+            assert "then move to the next opponent" in tooltip and "finish the run" not in tooltip, tooltip
+
+        at.button(key=f"{game['prefix']}_btn_fast_forward").click()
+        at.run()
+        assert not at.exception
+    assert at.session_state[game["arena_key"]].run_complete

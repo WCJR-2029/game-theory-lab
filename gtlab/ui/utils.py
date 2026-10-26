@@ -99,12 +99,15 @@ def match_over_line(arena) -> str | None:
     return f"Match over: you {you}, {name} {them}"
 
 
-def play_out_help(rounds_left: int, move_label: str, has_moved: bool, keeps_wheel: bool = False) -> str:
+def play_out_help(
+    rounds_left: int, move_label: str, has_moved: bool, keeps_wheel: bool = False, last_match: bool = False,
+) -> str:
     """Tooltip for "Play out this match", naming the move it will play for you.
 
     The button repeats your last move, or plays a default before your first
     one; without saying which, a player who never moved could cooperate
-    through a whole match without knowing it.
+    through a whole match without knowing it.  On the last opponent the
+    click ends the run, so the tooltip says that instead of "next opponent".
     """
     if has_moved:
         move = f"repeats your last move ({move_label})"
@@ -112,10 +115,8 @@ def play_out_help(rounds_left: int, move_label: str, has_moved: bool, keeps_whee
         move = f"plays {move_label}, since you haven't moved yet"
     if keeps_wheel:
         move = f"keeps the wheel and {move}"
-    return (
-        f"Auto-resolve the remaining {rounds_left} rounds, then move to the next opponent. "
-        f"{move[0].upper()}{move[1:]}."
-    )
+    then = "finish the run" if last_match else "move to the next opponent"
+    return f"Auto-resolve the remaining {rounds_left} rounds, then {then}. {move[0].upper()}{move[1:]}."
 
 
 # ---------------------------------------------------------------------------

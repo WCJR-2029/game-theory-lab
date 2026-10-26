@@ -496,6 +496,7 @@ def _render_current_match_panel(arena: CHKArenaState, progress: dict) -> None:
                     _move_label(fast_forward_chk_move(arena)),
                     has_moved=arena.last_player_actual is not None,
                     keeps_wheel=True,
+                    last_match=arena.current_opponent_idx == len(arena.bots) - 1,
                 ),
             ):
                 fast_forward_chk_match(arena)

@@ -471,6 +471,7 @@ def _render_current_match_panel(arena: SHArenaState, progress: dict) -> None:
                     rounds_left,
                     _move_label(fast_forward_sh_move(arena)),
                     has_moved=arena.last_player_actual is not None,
+                    last_match=arena.current_opponent_idx == len(arena.bots) - 1,
                 ),
             ):
                 fast_forward_sh_match(arena)

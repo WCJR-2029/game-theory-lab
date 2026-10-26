@@ -349,6 +349,7 @@ def _render_current_match_panel(arena: ArenaState, progress: dict) -> None:
                     rounds_left,
                     "Cooperate" if fast_forward_move(arena) == COOPERATE else "Defect",
                     has_moved=arena.last_player_actual is not None,
+                    last_match=arena.current_opponent_idx == len(arena.bots) - 1,
                 ),
             ):
                 fast_forward_match(arena)
