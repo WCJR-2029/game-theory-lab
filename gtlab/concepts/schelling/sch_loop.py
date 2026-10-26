@@ -169,6 +169,22 @@ def current_puzzle(session: SCHSession) -> Optional[CoordinationPuzzle]:
     return None
 
 
+def match_kind(puzzle: CoordinationPuzzle, pick: object) -> str:
+    """What an answer is: the crowd's favourite (focal), the puzzle's clever decoy, or neither.
+
+    The focal-point nudges are only true of the favourite answer, so a match on
+    the decoy or on a rarer answer gets its own nudge.
+    """
+    from gtlab.ui.nudges import SCH_MATCH_FOCAL, SCH_MATCH_DECOY, SCH_MATCH_OTHER
+    weights = puzzle.focal_distribution
+    top = max(weights.values())
+    if any(check_match(puzzle, pick, answer) for answer, w in weights.items() if w == top):
+        return SCH_MATCH_FOCAL
+    if puzzle.logical_decoy is not None and check_match(puzzle, pick, puzzle.logical_decoy):
+        return SCH_MATCH_DECOY
+    return SCH_MATCH_OTHER
+
+
 def submit_pick(session: SCHSession, player_pick: object) -> dict:
     """Record the player's pick, draw the partner's pick, and resolve the round.
 
@@ -203,6 +219,7 @@ def submit_pick(session: SCHSession, player_pick: object) -> dict:
         player_pick=player_pick,
         partner_pick=partner,
         consecutive_focal_matches=session.consecutive_focal_matches,
+        match_kind=match_kind(puzzle, player_pick),
     )
     session.last_nudge_event = nudge_event
 

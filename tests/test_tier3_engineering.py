@@ -513,9 +513,16 @@ class TestClassifyUltRoundEvent:
         )
 
     def test_dictator_round_responder(self):
-        from gtlab.ui.nudges import ULT_NUDGE_DICTATOR_GENEROSITY
+        # Receiving in a Dictator round: "You couldn't say no", not a question about your generosity
+        from gtlab.ui.nudges import ULT_NUDGE_DICTATOR_RECEIVED
         result = self._make_result(accepted=True, dictator_mode=True, rf=0.5)
         key = self._call("responder", result)
+        assert key == ULT_NUDGE_DICTATOR_RECEIVED
+
+    def test_dictator_round_proposer(self):
+        from gtlab.ui.nudges import ULT_NUDGE_DICTATOR_GENEROSITY
+        result = self._make_result(accepted=True, dictator_mode=True, rf=0.5)
+        key = self._call("proposer", result)
         assert key == ULT_NUDGE_DICTATOR_GENEROSITY
 
     def test_punished_unfairness(self):
@@ -543,11 +550,11 @@ class TestClassifyUltRoundEvent:
         assert key == ULT_NUDGE_ACCEPTED_FAIR
 
     def test_dictator_priority_over_punished(self):
-        # Dictator mode with responder role fires generosity even if not accepted
-        from gtlab.ui.nudges import ULT_NUDGE_DICTATOR_GENEROSITY
+        # Dictator mode with responder role fires the Dictator note even if not accepted
+        from gtlab.ui.nudges import ULT_NUDGE_DICTATOR_RECEIVED
         result = self._make_result(accepted=False, dictator_mode=True, rf=0.2)
         key = self._call("responder", result)
-        assert key == ULT_NUDGE_DICTATOR_GENEROSITY
+        assert key == ULT_NUDGE_DICTATOR_RECEIVED
 
 
 # ---------------------------------------------------------------------------

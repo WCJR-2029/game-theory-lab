@@ -437,6 +437,13 @@ SCH_NUDGE_CONVERGENCE = "sch_convergence"
 SCH_NUDGE_FOCAL_VS_LOGIC = "sch_focal_vs_logic"
 SCH_NUDGE_NO_MATCH = "sch_no_match"
 SCH_NUDGE_ROUND_START = "sch_round_start"
+SCH_NUDGE_DECOY_MATCH = "sch_decoy_match"   # Matched on the clever (decoy) answer
+SCH_NUDGE_RARE_MATCH = "sch_rare_match"     # Matched on an answer that is not the crowd's favourite
+
+#: What a matched answer was, for classify_sch_round_event: the crowd's favourite, the clever decoy, or neither.
+SCH_MATCH_FOCAL = "focal"
+SCH_MATCH_DECOY = "decoy"
+SCH_MATCH_OTHER = "other"
 
 # ---------------------------------------------------------------------------
 # Schelling nudge copy — feel first, name after
@@ -475,6 +482,23 @@ _SCH_NUDGES: dict[str, dict] = {
             "the one that feels inevitable wins. That's what Schelling called a focal point."
         ),
     },
+    SCH_NUDGE_DECOY_MATCH: {
+        "headline": "You both went for the clever answer.",
+        "body": (
+            "This time the clever answer matched: you and this stranger both landed on it. "
+            "Most people don't. Across a crowd, the obvious answer usually draws more matches "
+            "than the clever one. Which would you bet on with the next stranger?"
+        ),
+    },
+    SCH_NUDGE_RARE_MATCH: {
+        "headline": "You matched on a less common answer.",
+        "body": (
+            "Most people would have picked something else here, but you and this stranger "
+            "landed on the same answer anyway. Sometimes coordination is luck, or a quirk you "
+            "happen to share. The answer most people reach for is the focal point. "
+            "Notice whether yours keeps matching."
+        ),
+    },
     SCH_NUDGE_NO_MATCH: {
         "headline": "Your sense of 'obvious' and theirs diverged.",
         "body": (
@@ -502,6 +526,12 @@ ULT_NUDGE_REPUTATION_BITE = "ult_reputation_bite"
 ULT_NUDGE_ROUND_START = "ult_round_start"
 ULT_NUDGE_ACCEPTED_FAIR = "ult_accepted_fair"
 ULT_NUDGE_AI_REJECTED_YOU = "ult_ai_rejected_you"
+ULT_NUDGE_REJECTED_FAIR = "ult_rejected_fair"          # You rejected a fair offer
+ULT_NUDGE_AI_REJECTED_FAIR = "ult_ai_rejected_fair"    # They rejected your fair offer
+ULT_NUDGE_DICTATOR_RECEIVED = "ult_dictator_received"  # Dictator round with you receiving
+
+#: At or above this share for the responder, an offer is fair (the "fair offer" nudge uses the same line).
+ULT_FAIR_FRACTION = 0.40
 
 # ---------------------------------------------------------------------------
 # Ultimatum nudge copy — feel first, name after
@@ -549,7 +579,7 @@ _ULT_NUDGES: dict[str, dict] = {
         "body": (
             "Lowball early and the table turns colder. "
             "Opponents who've been on the wrong end of a stingy offer "
-            "start demanding more before they say yes. "
+            "start offering you less when it's their turn to propose. "
             "Reputation isn't just a score — it shifts the negotiation itself."
         ),
     },
@@ -567,6 +597,32 @@ _ULT_NUDGES: dict[str, dict] = {
             "The responder walked away empty-handed rather than accept your split. "
             "That's not irrational — it's a signal. "
             "Some opponents would rather both lose than let an unfair offer stand."
+        ),
+    },
+    ULT_NUDGE_REJECTED_FAIR: {
+        "headline": "You turned down a fair split.",
+        "body": (
+            "They offered you a fair share, and saying no left you both with nothing. "
+            "Notice what drove the no: the offer itself, "
+            "or something about how this opponent had played earlier?"
+        ),
+    },
+    ULT_NUDGE_AI_REJECTED_FAIR: {
+        "headline": "They turned down a fair split.",
+        "body": (
+            "You offered them a fair share, and they still said no, so you both walk away with nothing. "
+            "Some opponents ask for a lot from the start, "
+            "and some raise their bar after you've turned down their offers. "
+            "Notice which kind this one is."
+        ),
+    },
+    ULT_NUDGE_DICTATOR_RECEIVED: {
+        "headline": "You couldn't say no. The offer just stood.",
+        "body": (
+            "In Dictator mode there's no threat of rejection, so whatever they gave, they gave by choice. "
+            "That strips out strategy and leaves one question: "
+            "what does someone give when they don't have to give anything? "
+            "In experiments with people, offers usually shrink once the other side can't refuse."
         ),
     },
 }
@@ -600,12 +656,15 @@ def classify_ult_round_event(
         The opponent's reputation memory (after update_reputation was called).
 
     Priority order:
-      1. Dictator round (player was responder, no veto) → generosity nudge
-      2. Player rejected an unfair offer → punished-unfairness nudge
+      1. Dictator round: the player decided (generosity) or received (no veto)
+      2. Player rejected an offer: punished an unfair one, or turned down a fair one
       3. High-stakes round where player accepted an unfair split → swallowed-high-stakes
-      4. AI rejected player's offer → ai-rejected-you nudge
+      4. AI rejected player's offer: an unfair one, or a fair one
       5. Reputation bite: reputation is on and a shift is detectable → reputation-bite
       6. Fair offer accepted → accepted-fair nudge
+
+    Copy that calls an offer stingy or unfair is only chosen when it was below
+    ULT_FAIR_FRACTION, and copy that calls it fair only when it was at or above.
     """
     accepted = getattr(result, "accepted", True)
     dictator_mode = getattr(result, "dictator_mode", False)
@@ -615,13 +674,15 @@ def classify_ult_round_event(
     HIGH_STAKES_THRESHOLD = 500   # prize ≥ 500 → "high stakes"
     UNFAIR_THRESHOLD = 0.30       # responder fraction < 30% → "unfair"
 
-    # 1. Dictator round
-    if dictator_mode and role == "responder":
-        return ULT_NUDGE_DICTATOR_GENEROSITY
+    fair = responder_fraction >= ULT_FAIR_FRACTION
 
-    # 2. Player rejected unfair offer (responder role, Ultimatum)
-    if role == "responder" and not accepted and not dictator_mode:
-        return ULT_NUDGE_PUNISHED_UNFAIRNESS
+    # 1. Dictator round: "They couldn't say no" is about the player deciding the split
+    if dictator_mode:
+        return ULT_NUDGE_DICTATOR_GENEROSITY if role == "proposer" else ULT_NUDGE_DICTATOR_RECEIVED
+
+    # 2. Player rejected an offer (responder role, Ultimatum)
+    if role == "responder" and not accepted:
+        return ULT_NUDGE_REJECTED_FAIR if fair else ULT_NUDGE_PUNISHED_UNFAIRNESS
 
     # 3. High stakes + player accepted an unfair split
     if (
@@ -635,7 +696,7 @@ def classify_ult_round_event(
 
     # 4. AI rejected player's offer (proposer role, not accepted)
     if role == "proposer" and not accepted:
-        return ULT_NUDGE_AI_REJECTED_YOU
+        return ULT_NUDGE_AI_REJECTED_FAIR if fair else ULT_NUDGE_AI_REJECTED_YOU
 
     # 5. Reputation bite: reputation on + memory shows player was stingy/rejected
     if reputation_on and memory is not None:
@@ -644,7 +705,7 @@ def classify_ult_round_event(
             return ULT_NUDGE_REPUTATION_BITE
 
     # 6. Fair offer accepted
-    if accepted and responder_fraction >= 0.40:
+    if accepted and fair:
         return ULT_NUDGE_ACCEPTED_FAIR
 
     return None
@@ -656,16 +717,26 @@ def classify_sch_round_event(
     player_pick: object,
     partner_pick: object,
     consecutive_focal_matches: int = 0,
+    match_kind: str = SCH_MATCH_FOCAL,
 ) -> str | None:
     """Classify the most salient Schelling nudge event for a just-resolved round.
 
+    ``match_kind`` says what the matched answer was (SCH_MATCH_*). The focal-point
+    copy is only true of the crowd's favourite answer, so a match on the clever
+    decoy or on a rarer answer gets its own nudge.
+
     Priority order:
-      1. Convergence: 2nd+ consecutive focal match (salience-without-logic lesson)
-      2. Focal-vs-logic match (salience beat the clever answer)
-      3. Match (focal point convergence — first match)
-      4. No match (divergence insight)
+      1. Matched on the decoy, or on a rarer answer
+      2. Convergence: 2nd+ consecutive focal match (salience-without-logic lesson)
+      3. Focal-vs-logic match (salience beat the clever answer)
+      4. Match (focal point convergence — first match)
+      5. No match (divergence insight)
     """
-    # 1. Convergence: recurring focal match (streak >= 2)
+    if matched and match_kind == SCH_MATCH_DECOY:
+        return SCH_NUDGE_DECOY_MATCH
+    if matched and match_kind == SCH_MATCH_OTHER:
+        return SCH_NUDGE_RARE_MATCH
+    # Convergence: recurring focal match (streak >= 2)
     if matched and consecutive_focal_matches >= 2:
         return SCH_NUDGE_CONVERGENCE
 
@@ -742,6 +813,7 @@ MS_NUDGE_GOT_READ_STREAK = "ms_got_read_streak"
 MS_NUDGE_FREQUENCY_BIAS = "ms_frequency_bias"
 MS_NUDGE_RANDOMIZER_WALL = "ms_randomizer_wall"
 MS_NUDGE_BE_RANDOM = "ms_be_random"
+MS_NUDGE_PATTERN_READ = "ms_pattern_read"  # The Pattern Reader read a correct prediction off your recent moves
 
 _MS_NUDGES: dict[str, dict] = {
     MS_NUDGE_ROUND_START: {
@@ -766,6 +838,14 @@ _MS_NUDGES: dict[str, dict] = {
             "Even 'mixing it up' leaks a bias when you're not tracking the totals. "
             "The Frequency Counter doesn't care about your last move - "
             "it cares about all of them. And it just found your lean."
+        ),
+    },
+    MS_NUDGE_PATTERN_READ: {
+        "headline": "It read your rhythm.",
+        "body": (
+            "The Pattern Reader looks at your last few moves, finds the times that same run came up "
+            "before, and bets you'll do what you did next back then. "
+            "Mixing it up only helps if the mix has no rhythm."
         ),
     },
     MS_NUDGE_RANDOMIZER_WALL: {
@@ -840,6 +920,9 @@ def classify_ms_round_event(
                 max_freq = max(freqs) if freqs else 0.0
                 min_freq = min(freqs) if freqs else 0.0
                 if (max_freq - min_freq) > 0.20:
+                    # The frequency copy explains the Frequency Counter; the Pattern Reader reads sequences.
+                    if isinstance(active_opponent, PatternReader):
+                        return MS_NUDGE_PATTERN_READ
                     return MS_NUDGE_FREQUENCY_BIAS
 
     # 3. Randomizer wall
