@@ -230,3 +230,34 @@ def test_claims_table_phrases_appear_in_the_copy(game):
         text = get_text(event)
         assert text is not None, f"no copy for {event}"
         assert phrase in f"{text['headline']} {text['body']}", f"{event}: copy no longer says {phrase!r}"
+
+
+def test_the_pd_loop_keeps_misfire_notes_and_its_own_notes_true():
+    """The Prisoner's Dilemma loop adds two notes after the classifier ("This opponent won't forgive." and
+    "Sustained cooperation is quietly pulling ahead."). Bug this guards: it applied them unconditionally, so a misfired
+    round lost its misfire note. Seeded play against every opponent, with noise off and on, checks each round."""
+    import random
+    from gtlab.ui import game_loop
+
+    rng = random.Random(7)
+    checked = {"noise_flip": 0, "grudge_lockdown": 0, "coop_pays": 0}
+    for noise in (0.0, 0.1, 0.3):
+        for _ in range(40):
+            state = game_loop.init_arena(list(game_loop.DEFAULT_SELECTED), noise=noise, mystery_mode=False)
+            while not state.run_complete:
+                opponent = state.bots[state.current_opponent_idx].name
+                before = list(state.player_history)
+                r = game_loop.step_round(state, rng.choice((C, D)))
+                event = r["nudge_event"]
+                misfire = noise > 0 and (r["player_flipped"] or r["opp_flipped"])
+                if misfire:
+                    assert event == nudges.NUDGE_NOISE_FLIP, (opponent, event)
+                if event == nudges.NUDGE_GRUDGE_LOCKDOWN:
+                    assert opponent == "Grudger" and not misfire
+                    assert any(p == D for p, _ in before), "Grudger only locks down after you defected"
+                if event == nudges.NUDGE_COOPERATION_PAYS:
+                    rounds = before + [(r["player_move"], r["opp_move"])]
+                    assert not misfire and len(rounds) == 6
+                    assert sum(1 for p, o in rounds if p == o == C) >= 4
+                checked[event] = checked.get(event, 0) + 1
+    assert all(checked[k] > 0 for k in ("noise_flip", "grudge_lockdown", "coop_pays")), checked

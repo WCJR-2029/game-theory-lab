@@ -311,16 +311,20 @@ def step_round(state: ArenaState, player_move: Move) -> dict:
         opp_flipped=opp_flipped,
     )
 
+    # The two notes below read a choice into the round, so a misfired round keeps its misfire note.
+    misfired = state.noise > 0.0 and (player_flipped or opp_flipped)
+
     # Special case: grudge lockdown detection
     # If Grudger, detect when they've switched to permanent defection
-    if (opponent.name == "Grudger"
+    if (not misfired
+            and opponent.name == "Grudger"
             and actual_opp == DEFECT
             and state.last_opp_actual != DEFECT
             and any(pm == DEFECT for pm, _ in state.player_history[:-1])):
         nudge_event = "grudge_lockdown"
 
     # Cooperation pays nudge: fire after round 5 if both have been cooperating mostly
-    if state.rounds_this_match == 6:
+    if not misfired and state.rounds_this_match == 6:
         coop_rounds = sum(
             1 for pm, om in state.player_history
             if pm == COOPERATE and om == COOPERATE
