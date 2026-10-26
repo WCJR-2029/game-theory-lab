@@ -396,6 +396,11 @@ def _finalize_chk_match(state: CHKArenaState) -> None:
 # ---------------------------------------------------------------------------
 
 
+def fast_forward_chk_move(state: CHKArenaState) -> Move:
+    """The move "Play out this match" plays: your last move, or SWERVE before your first."""
+    return state.last_player_actual if state.last_player_actual is not None else SWERVE
+
+
 def fast_forward_chk_match(state: CHKArenaState) -> None:
     """Play out the remaining rounds of the current Chicken match instantly.
 
@@ -409,7 +414,7 @@ def fast_forward_chk_match(state: CHKArenaState) -> None:
 
     # Repeat last move, or default to Swerve if the round hasn't started.
     # We also need to reset the commit phase so play_round can be called directly.
-    default_move = state.last_player_actual if state.last_player_actual is not None else SWERVE
+    default_move = fast_forward_chk_move(state)
 
     # Stop on the opponent change: finishing a match resets rounds_this_match, so the
     # round count alone would play out the whole run.

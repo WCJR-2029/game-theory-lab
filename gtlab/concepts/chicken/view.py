@@ -32,6 +32,7 @@ from gtlab.concepts.chicken.chk_loop import (
     play_round,
     compute_chk_standings,
     fast_forward_chk_match,
+    fast_forward_chk_move,
 )
 from gtlab.concepts.chicken.strategies import (
     CHK_STRATEGY_CLASSES,
@@ -71,6 +72,7 @@ from gtlab.ui.theme import (
     transfer_expander,
 )
 from gtlab.ui.utils import ordinal, match_over_line, running_total, standings_halves, top_bot_lead
+from gtlab.ui.utils import play_out_help
 
 # ---------------------------------------------------------------------------
 # Session-state keys (chk_-prefixed throughout)
@@ -489,9 +491,11 @@ def _render_current_match_panel(arena: CHKArenaState, progress: dict) -> None:
             if st.button(
                 "Play out this match",
                 key="chk_btn_fast_forward",
-                help=(
-                    f"Auto-resolve the remaining {rounds_left} rounds "
-                    "(keeps the wheel, repeats your last move), then move to the next opponent."
+                help=play_out_help(
+                    rounds_left,
+                    _move_label(fast_forward_chk_move(arena)),
+                    has_moved=arena.last_player_actual is not None,
+                    keeps_wheel=True,
                 ),
             ):
                 fast_forward_chk_match(arena)

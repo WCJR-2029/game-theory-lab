@@ -402,6 +402,11 @@ def _finalize_match(state: ArenaState) -> None:
 # ---------------------------------------------------------------------------
 
 
+def fast_forward_move(state: ArenaState) -> Move:
+    """The move "Play out this match" plays: your last move, or COOPERATE before your first."""
+    return state.last_player_actual if state.last_player_actual is not None else COOPERATE
+
+
 def fast_forward_match(state: ArenaState) -> None:
     """Play out the remaining rounds of the current match instantly.
 
@@ -416,7 +421,7 @@ def fast_forward_match(state: ArenaState) -> None:
     if state.run_complete:
         return
 
-    default_move = state.last_player_actual if state.last_player_actual is not None else COOPERATE
+    default_move = fast_forward_move(state)
 
     # Finishing a match resets rounds_this_match and advances the opponent, so stop on the
     # opponent change; looping on the round count alone played out the whole run.

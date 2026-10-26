@@ -19,7 +19,7 @@ from gtlab.engine import (
     PAYOFF_R, PAYOFF_T, PAYOFF_S, PAYOFF_P,
 )
 from gtlab.ui.game_loop import (
-    ArenaState, init_arena, step_round, compute_standings, fast_forward_match,
+    ArenaState, init_arena, step_round, compute_standings, fast_forward_match, fast_forward_move,
     MATCH_LENGTH, DEFAULT_SELECTED, STRATEGY_DESCRIPTIONS, STRATEGY_CLASSES,
     HUMAN_LABEL, CONCEPT_KEY,
 )
@@ -43,6 +43,7 @@ from gtlab.ui.theme import (
     transfer_expander,
 )
 from gtlab.ui.utils import ordinal, match_over_line, running_total, standings_halves, top_bot_lead
+from gtlab.ui.utils import play_out_help
 from gtlab.concepts.prisoners_dilemma.briefing import (
     STORY,
     HOW_IT_WORKS,
@@ -344,9 +345,12 @@ def _render_current_match_panel(arena: ArenaState, progress: dict) -> None:
             if st.button(
                 "Play out this match",
                 key="pd_btn_fast_forward",
-                help=f"Auto-resolve the remaining {rounds_left} rounds, then move to the next opponent.",
+                help=play_out_help(
+                    rounds_left,
+                    "Cooperate" if fast_forward_move(arena) == COOPERATE else "Defect",
+                    has_moved=arena.last_player_actual is not None,
+                ),
             ):
-                # Repeat last move (or COOPERATE if none yet)
                 fast_forward_match(arena)
                 prog = increment_experience(progress, CONCEPT_KEY, 1)
                 save_progress(prog)

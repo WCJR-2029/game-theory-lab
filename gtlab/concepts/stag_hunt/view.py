@@ -32,6 +32,7 @@ from gtlab.concepts.stag_hunt.sh_loop import (
     commit_move,
     compute_sh_standings,
     fast_forward_sh_match,
+    fast_forward_sh_move,
 )
 from gtlab.concepts.stag_hunt.strategies import (
     SH_STRATEGY_CLASSES,
@@ -64,6 +65,7 @@ from gtlab.ui.theme import (
     transfer_expander,
 )
 from gtlab.ui.utils import ordinal, match_over_line, running_total, standings_halves, top_bot_lead
+from gtlab.ui.utils import play_out_help
 from gtlab.concepts.stag_hunt.briefing import (
     STORY, HOW_IT_WORKS, WHAT_TO_WATCH, WHY_IT_MATTERS, YOUR_JOB,
 )
@@ -465,7 +467,11 @@ def _render_current_match_panel(arena: SHArenaState, progress: dict) -> None:
             if st.button(
                 "Play out this match",
                 key="sh_btn_fast_forward",
-                help=f"Auto-resolve the remaining {rounds_left} rounds, then move to the next opponent.",
+                help=play_out_help(
+                    rounds_left,
+                    _move_label(fast_forward_sh_move(arena)),
+                    has_moved=arena.last_player_actual is not None,
+                ),
             ):
                 fast_forward_sh_match(arena)
                 prog = increment_experience(progress, SH_CONCEPT_KEY, 1)

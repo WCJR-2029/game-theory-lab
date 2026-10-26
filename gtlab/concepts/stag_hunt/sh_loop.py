@@ -380,6 +380,11 @@ def _finalize_sh_match(state: SHArenaState) -> None:
 # ---------------------------------------------------------------------------
 
 
+def fast_forward_sh_move(state: SHArenaState) -> Move:
+    """The move "Play out this match" plays: your last move, or COOPERATE (Stag) before your first."""
+    return state.last_player_actual if state.last_player_actual is not None else COOPERATE
+
+
 def fast_forward_sh_match(state: SHArenaState) -> None:
     """Play out the remaining rounds of the current SH match instantly.
 
@@ -398,11 +403,7 @@ def fast_forward_sh_match(state: SHArenaState) -> None:
     state.player_pending_signal = None
     state.opp_pending_announced = None
 
-    default_move = (
-        state.last_player_actual
-        if state.last_player_actual is not None
-        else COOPERATE
-    )
+    default_move = fast_forward_sh_move(state)
 
     # Stop on the opponent change: finishing a match resets rounds_this_match, so the
     # round count alone would play out the whole run.
