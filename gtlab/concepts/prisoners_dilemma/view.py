@@ -543,8 +543,8 @@ def render() -> None:
 
         started = intro_above_fold(
             hook=(
-                "Two choices, no communication — and the pattern that emerges "
-                "across many rounds changes everything."
+                "Two choices, no communication, and ten rounds with each opponent. "
+                "Notice what you start doing."
             ),
             your_job=YOUR_JOB,
             start_button_label="Start run",

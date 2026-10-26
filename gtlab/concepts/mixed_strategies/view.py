@@ -214,8 +214,7 @@ def _render_setup_screen(
 
     started = intro_above_fold(
         hook=(
-            "Any pattern you fall into can be read — and punished. "
-            "The only safe move is genuine unpredictability."
+            "Every move has a counter, and your opponent is watching what you play."
         ),
         your_job=YOUR_JOB,
         start_button_label="Start",

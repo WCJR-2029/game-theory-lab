@@ -752,7 +752,7 @@ def render() -> None:
     # Main header
     app_header(
         title="Ultimatum & Dictator",
-        subtitle="One player proposes a split of the prize. The other accepts — or rejects and both walk away with nothing. Cold logic says take any offer. Feel it for yourself.",
+        subtitle="One player proposes a split of the prize. The other accepts — or rejects and both walk away with nothing. What would you accept?",
     )
 
     arena: ULTArenaState | None = st.session_state[_KEY_ARENA]

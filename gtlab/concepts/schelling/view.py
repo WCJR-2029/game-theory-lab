@@ -579,7 +579,7 @@ def render() -> None:
         started = intro_above_fold(
             hook=(
                 "You and a silent stranger must independently pick the same answer — "
-                "no communication, no agreement, just whatever feels inevitable."
+                "no communication, no agreement."
             ),
             your_job=YOUR_JOB,
             start_button_label="Start session",

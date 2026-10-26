@@ -694,8 +694,8 @@ def render() -> None:
 
         started = intro_above_fold(
             hook=(
-                "One move locks you in — and once the wheel is gone, "
-                "your opponent has no choice but to respond."
+                "One move locks you in for good: throwing away the wheel. "
+                "Use it, or don't."
             ),
             your_job=YOUR_JOB,
             start_button_label="Enter the arena",

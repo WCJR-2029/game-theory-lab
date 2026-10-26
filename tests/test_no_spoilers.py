@@ -23,6 +23,8 @@ from gtlab.ui import nudges
 GIVEAWAYS = [
     "Talk is cheap", "Trust is the question", "Nerve is easy", "Commitment is harder", "Fairness says otherwise",
     "only safe play is genuine randomness", "Repeated play changes everything", "unexploitable",
+    # Found by an outside review on the setup screens and in Ultimatum's header and first note:
+    "changes everything", "only safe move", "Cold logic", "no choice but to respond", "whatever feels inevitable",
 ]
 
 VIEWS = sorted(Path("gtlab/concepts").glob("*/view.py"))
@@ -63,3 +65,26 @@ def test_settings_use_plain_words():
         assert "Chance a move misfires" in text, view
     for view in VIEWS:
         assert "Mystery mode" not in view.read_text(), f"{view}: the setting is called Mystery opponents"
+
+
+def _rendered_pre_play(concept_key=None) -> str:
+    """Everything shown before the first move, except the collapsed opt-in briefing."""
+    from streamlit.testing.v1 import AppTest
+    at = AppTest.from_file("app.py", default_timeout=30)
+    at.run()
+    if concept_key is not None:
+        at.button(key=f"menu_play_{concept_key}").click()
+        at.run()
+    assert not at.exception
+    inside_briefing = {m.value for e in at.expander for m in e.markdown}
+    shown = [m.value for m in at.markdown if m.value not in inside_briefing]
+    shown += [c.value for c in at.caption] + [w.value for w in getattr(at, "subheader", [])]
+    return " ".join(shown)
+
+
+@pytest.mark.parametrize("concept_key", [None] + [c["key"] for c in CONCEPTS],
+                         ids=["menu"] + [c["key"] for c in CONCEPTS])
+def test_what_you_see_before_playing_sets_up_without_the_lesson(concept_key):
+    text = _rendered_pre_play(concept_key)
+    found = [g for g in GIVEAWAYS if g.lower() in text.lower()]
+    assert not found, f"{concept_key or 'menu'} shows before play: {found}"

@@ -581,7 +581,7 @@ _ULT_NUDGES: dict[str, dict] = {
             "One player names a split of the prize. "
             "The other can accept — and both get their shares — "
             "or reject, and neither gets anything. "
-            "Cold logic says accept any offer. Play a round and notice what actually happens."
+            "Play a round and notice what you do."
         ),
     },
     ULT_NUDGE_PUNISHED_UNFAIRNESS: {
