@@ -64,3 +64,33 @@ def ordinal(n: int) -> str:
     else:
         suffix = {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
     return f"{n}{suffix}"
+
+
+# ---------------------------------------------------------------------------
+# End-of-run reveal helpers — shared by the three arena debriefs (PD, Stag Hunt,
+# Chicken) so their text agrees with the result banner.
+# ---------------------------------------------------------------------------
+
+
+def standings_halves(rows: list[dict]) -> tuple[set[str], set[str]]:
+    """Return (top_half, bottom_half) bot names from the final standings rows.
+
+    Halves are counted over the whole table, human included, the same way the
+    result banner ranks the player.  The middle rank of an odd-sized table is
+    in neither half, so 4th of 7 is never called near the top or low.
+    """
+    n = len(rows)
+    top = {r["name"] for r in rows[:max(1, n // 2)] if not r["is_human"]}
+    bottom = {r["name"] for r in rows[(n + 1) // 2:] if not r["is_human"]}
+    return top, bottom
+
+
+def top_bot_lead(rows: list[dict], name: str) -> str:
+    """Opening clause for the best bot's reveal sentence.
+
+    'X finished at the top' only when the bot really came first; when the
+    player came first the best bot is second, and the text says so.
+    """
+    if rows and rows[0]["is_human"]:
+        return f"{name} finished second, behind you"
+    return f"{name} finished at the top"

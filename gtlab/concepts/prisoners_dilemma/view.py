@@ -42,7 +42,7 @@ from gtlab.ui.theme import (
     intro_above_fold,
     transfer_expander,
 )
-from gtlab.ui.utils import ordinal
+from gtlab.ui.utils import ordinal, standings_halves, top_bot_lead
 from gtlab.concepts.prisoners_dilemma.briefing import (
     STORY,
     HOW_IT_WORKS,
@@ -361,9 +361,7 @@ def _make_reveal_body(rows: list[dict]) -> str:
     if not rows:
         return ""
 
-    n = len(rows)
-    top_half = [r for r in rows[:max(1, n // 2)] if not r["is_human"]]
-    bottom_half = [r for r in rows[max(1, n // 2):] if not r["is_human"]]
+    top_names, bottom_names = standings_halves(rows)
 
     # Find top non-human strategy
     top_bot = None
@@ -376,20 +374,19 @@ def _make_reveal_body(rows: list[dict]) -> str:
     always_defect_name = "Always Defect"
     always_coop_name = "Always Cooperate"
 
-    top_names = {r["name"] for r in top_half}
-    bottom_names = {r["name"] for r in bottom_half}
-
     sentences = []
 
     if top_bot:
-        sentences.append(
-            f"{top_bot['name']} finished at the top — "
-            + (
-                "never betraying first, but returning defection in kind."
-                if top_bot["name"] in tft_names
-                else "its approach held up across the whole arena."
-            )
-        )
+        # The best bot gets one sentence: it is not mentioned again below.
+        top_names.discard(top_bot["name"])
+        bottom_names.discard(top_bot["name"])
+        if top_bot["name"] in tft_names:
+            why = "never betraying first, but returning defection in kind."
+        elif top_bot["name"] == always_defect_name:
+            why = "worth noticing what that says about who it was paired against."
+        else:
+            why = "its approach held up across the whole arena."
+        sentences.append(f"{top_bot_lead(rows, top_bot['name'])} — {why}")
 
     if always_defect_name in bottom_names:
         sentences.append(

@@ -70,7 +70,7 @@ from gtlab.ui.theme import (
     intro_above_fold,
     transfer_expander,
 )
-from gtlab.ui.utils import ordinal
+from gtlab.ui.utils import ordinal, standings_halves, top_bot_lead
 
 # ---------------------------------------------------------------------------
 # Session-state keys (chk_-prefixed throughout)
@@ -513,33 +513,35 @@ def _make_chk_reveal_body(rows: list[dict], arena: CHKArenaState) -> str:
     dove_name = "Dove"
 
     bot_rows = [r for r in rows if not r["is_human"]]
-    top_half_names = {r["name"] for r in bot_rows[: max(1, len(bot_rows) // 2)]}
-    bottom_half_names = {r["name"] for r in bot_rows[max(1, len(bot_rows) // 2):]}
+    top_half_names, bottom_half_names = standings_halves(rows)
 
     sentences = []
 
     top_bot = bot_rows[0] if bot_rows else None
     if top_bot:
+        # The best bot gets one sentence: it is not mentioned again below.
+        top_half_names.discard(top_bot["name"])
+        bottom_half_names.discard(top_bot["name"])
         if top_bot["name"] == committer_name:
             sentences.append(
-                "The Committer finished at the top — by visibly locking itself to "
+                f"{top_bot_lead(rows, 'The Committer')} — by visibly locking itself to "
                 "Straight, it forced the opponents who could read the commitment to "
                 "swerve. (It still crashed into the ones that can't adapt — a thrown "
                 "wheel only works against someone able to see it and respond.)"
             )
         elif top_bot["name"] == hawk_name:
             sentences.append(
-                "Hawk landed at the top — pure aggression held up across the arena, "
+                f"{top_bot_lead(rows, 'Hawk')} — pure aggression held up across the arena, "
                 "at least against this particular field."
             )
         elif top_bot["name"] == dove_name:
             sentences.append(
-                "Dove reached the top — consistent yielding avoided all the crashes "
+                f"{top_bot_lead(rows, 'Dove')} — consistent yielding avoided all the crashes "
                 "while the more aggressive strategies collided."
             )
         else:
             sentences.append(
-                f"{top_bot['name']} finished at the top — "
+                f"{top_bot_lead(rows, top_bot['name'])} — "
                 "its approach to commitment and aggression held up across the full arena."
             )
 

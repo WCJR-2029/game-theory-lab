@@ -63,7 +63,7 @@ from gtlab.ui.theme import (
     intro_above_fold,
     transfer_expander,
 )
-from gtlab.ui.utils import ordinal
+from gtlab.ui.utils import ordinal, standings_halves, top_bot_lead
 from gtlab.concepts.stag_hunt.briefing import (
     STORY, HOW_IT_WORKS, WHAT_TO_WATCH, WHY_IT_MATTERS, YOUR_JOB,
 )
@@ -481,9 +481,7 @@ def _make_sh_reveal_body(rows: list[dict]) -> str:
     if not rows:
         return ""
 
-    n = len(rows)
-    top_half = [r for r in rows[:max(1, n // 2)] if not r["is_human"]]
-    bottom_half = [r for r in rows[max(1, n // 2):] if not r["is_human"]]
+    top_names, bottom_names = standings_halves(rows)
 
     top_bot = None
     for r in rows:
@@ -491,30 +489,36 @@ def _make_sh_reveal_body(rows: list[dict]) -> str:
             top_bot = r
             break
 
-    top_names = {r["name"] for r in top_half}
-    bottom_names = {r["name"] for r in bottom_half}
-
     sentences = []
 
     if top_bot:
+        # The best bot gets one sentence: it is not mentioned again below.
+        top_names.discard(top_bot["name"])
+        bottom_names.discard(top_bot["name"])
+        lead = top_bot_lead(rows, top_bot["name"])
         if top_bot["name"] == "Trusting":
             sentences.append(
-                "Trusting finished near the top — unconditional cooperation "
+                f"{lead} — unconditional cooperation "
                 "paid off when partners showed up, though it had no defense against those who didn't."
             )
         elif top_bot["name"] == "Bluffer":
             sentences.append(
-                "Bluffer finished near the top — announcing Stag while hunting Hare "
+                f"{lead} — announcing Stag while hunting Hare "
                 "extracted gains from those who took the announcements at face value."
             )
         elif top_bot["name"] == "Mirror":
             sentences.append(
-                f"{top_bot['name']} finished at the top — "
+                f"{lead} — "
                 "copying what opponents actually did, round by round, kept it in sync with the field."
+            )
+        elif top_bot["name"] == "Cautious":
+            sentences.append(
+                f"{lead} — it never risked the stag, "
+                "and steady small payoffs added up."
             )
         else:
             sentences.append(
-                f"{top_bot['name']} finished at the top — "
+                f"{lead} — "
                 "its approach to trust and announcements held up across the whole arena."
             )
 
