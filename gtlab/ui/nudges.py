@@ -53,6 +53,8 @@ SH_NUDGE_NOISE_COLLAPSE = "sh_noise_collapse"   # A noise flip broke a trusting 
 SH_NUDGE_ROUND_START = "sh_round_start"         # First-round context for Stag Hunt
 SH_NUDGE_MUTUAL_HARE = "sh_mutual_hare"         # Both played Hare — the safe equilibrium
 SH_NUDGE_STAG_ABANDONED = "sh_stag_abandoned"   # Player went Stag; opponent went Hare
+SH_NUDGE_YOU_BLUFFED = "sh_you_bluffed"         # Player said Stag, went Hare; opponent said Stag, went Stag
+SH_NUDGE_THEY_HUNTED_ALONE = "sh_they_hunted_alone"  # Player said Hare, went Hare; opponent said Stag, went Stag
 
 # ---------------------------------------------------------------------------
 # Nudge copy — feel first, name after
@@ -215,6 +217,24 @@ _SH_NUDGES: dict[str, dict] = {
             "is worth the chance of this."
         ),
     },
+    SH_NUDGE_YOU_BLUFFED: {
+        "headline": "You said Stag. You went Hare.",
+        "body": (
+            "They said Stag and kept their word, so they hunted alone and came home with nothing "
+            "while you caught your hare. Your announcement cost nothing to make and bound you to "
+            "nothing; that's what makes it cheap talk. Some opponents listen to what you announce, "
+            "and some only watch what you do. Notice which kind this one is next round."
+        ),
+    },
+    SH_NUDGE_THEY_HUNTED_ALONE: {
+        "headline": "You said Hare and went Hare. They went Stag anyway.",
+        "body": (
+            "They'd said Stag and stuck to it, so they hunted alone and came home with nothing "
+            "while you caught your hare. Nobody bluffed: both announcements were true, they just "
+            "pointed different ways. They told you they were going for the stag. Notice what it "
+            "would take for you to believe them enough to join."
+        ),
+    },
 }
 
 
@@ -239,11 +259,11 @@ def classify_sh_round_event(
     Priority order:
       1. Noise flip that disrupted cooperation (noise collapse)
       2. Opponent bluffed (announced Stag, played Hare)
-      3. Opponent kept promise (announced Stag, played Stag) and it worked (mutual Stag)
-      4. Mutual Stag (both cooperated)
-      5. Player went Stag, opponent went Hare (stag abandoned)
-      6. Mutual Hare (safe equilibrium)
-      7. Opponent kept promise generically
+      3. Mutual Stag: promise kept if the opponent announced Stag, else mutual Stag
+      4. Player went Stag, opponent went Hare (stag abandoned)
+      5. Mutual Hare (safe equilibrium)
+      6. Player went Hare, opponent announced Stag and went Stag: the player bluffed
+         if they announced Stag, otherwise the opponent hunted alone
     """
     from gtlab.engine import COOPERATE, DEFECT  # local import avoids circular
 
@@ -270,9 +290,13 @@ def classify_sh_round_event(
     if player_actual == DEFECT and opp_actual == DEFECT:
         return SH_NUDGE_MUTUAL_HARE
 
-    # 6. Opponent kept promise (Stag announced, Stag played) in non-mutual case
-    if opp_announced == COOPERATE and opp_actual == COOPERATE:
-        return SH_NUDGE_PROMISE_KEPT
+    # 6. They said Stag and went Stag; you went Hare. The promise-kept copy is about mutual
+    #    Stag ("trust paid off"), so this round gets its own, keyed on what you announced.
+    if player_actual == DEFECT and opp_actual == COOPERATE and opp_announced == COOPERATE:
+        if player_announced == COOPERATE:
+            return SH_NUDGE_YOU_BLUFFED
+        if player_announced == DEFECT:
+            return SH_NUDGE_THEY_HUNTED_ALONE
 
     return None
 
