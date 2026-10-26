@@ -164,13 +164,50 @@ def _all_puzzles():
 
 
 def test_schelling_obvious_answer_outdraws_the_clever_one():
-    """The decoy note says a crowd's obvious answer usually draws more matches than the clever one."""
+    """The decoy note says a crowd's obvious answer usually draws more matches than the clever one. Answers the game
+    treats as the same (30/70 and 70/30) are counted together, as the matching does."""
+    from gtlab.concepts.schelling.sch_loop import answer_weights
+    from gtlab.concepts.schelling.model import check_match
+
     puzzles = [p for p in _all_puzzles() if p.logical_decoy is not None]
     assert puzzles
     for p in puzzles:
-        d = p.focal_distribution
-        top = max(d.values())
-        assert d.get(p.logical_decoy, 0) < top, f"{p.id}: the decoy should not be the most common answer"
+        groups = answer_weights(p)
+        decoy = sum(w for a, w in groups if check_match(p, a, p.logical_decoy))
+        assert decoy < max(w for _, w in groups), f"{p.id}: the decoy should not be the most common answer"
+
+
+def test_schelling_counts_equivalent_answers_together():
+    """30/70 and 70/30 are the same answer to the matching, so they are one answer to "most common" too."""
+    from gtlab.concepts.schelling.model import CoordinationPuzzle, Split
+    from gtlab.concepts.schelling.sch_loop import match_kind
+
+    puzzle = CoordinationPuzzle(id="test_split", category="splitting", prompt="Split 100.",
+                                choice_space=Split(total=100),
+                                focal_distribution={(30, 70): 3, (70, 30): 3, (50, 50): 4})
+    assert match_kind(puzzle, (70, 30)) == nudges.SCH_MATCH_FOCAL
+    assert match_kind(puzzle, (50, 50)) == nudges.SCH_MATCH_OTHER
+
+
+def test_schelling_streak_counts_only_matches_on_the_favourite():
+    """The convergence note ("2nd+ consecutive focal match") must not count a match on the decoy."""
+    from gtlab.concepts.schelling import sch_loop
+
+    p1, p2, p3 = [p for p in _all_puzzles() if p.logical_decoy is not None][:3]
+    favourite = lambda p: max(p.focal_distribution, key=p.focal_distribution.get)
+    picks = {p1.id: p1.logical_decoy, p2.id: favourite(p2), p3.id: favourite(p3)}
+    session = sch_loop.SCHSession(hard_mode=True, selected_categories=[], puzzle_queue=[p1, p2, p3],
+                                  current_index=0, round_seed=1)
+    events = []
+    import pytest as _pytest
+    with _pytest.MonkeyPatch.context() as m:
+        m.setattr(sch_loop, "draw_partner_pick", lambda p, seed=None: picks[p.id])
+        for p in (p1, p2, p3):
+            events.append(sch_loop.submit_pick(session, picks[p.id])["nudge_event"])
+            sch_loop.advance_to_next(session)
+
+    assert events == [nudges.SCH_NUDGE_DECOY_MATCH, nudges.SCH_NUDGE_FOCAL_VS_LOGIC, nudges.SCH_NUDGE_CONVERGENCE]
+    assert session.consecutive_focal_matches == 2
 
 
 @pytest.mark.parametrize("pick, kind", [("top", "decoy_match_absent"), ("decoy", "sch_decoy_match"),

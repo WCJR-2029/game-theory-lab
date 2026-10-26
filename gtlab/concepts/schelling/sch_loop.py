@@ -169,6 +169,20 @@ def current_puzzle(session: SCHSession) -> Optional[CoordinationPuzzle]:
     return None
 
 
+def answer_weights(puzzle: CoordinationPuzzle) -> list[tuple[object, int]]:
+    """The crowd's weight for each answer, counting answers the game treats as the same
+    (30/70 and 70/30, case and spacing) together, as check_match does."""
+    groups: list[list] = []
+    for answer, weight in puzzle.focal_distribution.items():
+        for group in groups:
+            if check_match(puzzle, answer, group[0]):
+                group[1] += weight
+                break
+        else:
+            groups.append([answer, weight])
+    return [(answer, weight) for answer, weight in groups]
+
+
 def match_kind(puzzle: CoordinationPuzzle, pick: object) -> str:
     """What an answer is: the crowd's favourite (focal), the puzzle's clever decoy, or neither.
 
@@ -176,9 +190,9 @@ def match_kind(puzzle: CoordinationPuzzle, pick: object) -> str:
     the decoy or on a rarer answer gets its own nudge.
     """
     from gtlab.ui.nudges import SCH_MATCH_FOCAL, SCH_MATCH_DECOY, SCH_MATCH_OTHER
-    weights = puzzle.focal_distribution
-    top = max(weights.values())
-    if any(check_match(puzzle, pick, answer) for answer, w in weights.items() if w == top):
+    groups = answer_weights(puzzle)
+    top = max(weight for _, weight in groups)
+    if any(check_match(puzzle, pick, answer) for answer, weight in groups if weight == top):
         return SCH_MATCH_FOCAL
     if puzzle.logical_decoy is not None and check_match(puzzle, pick, puzzle.logical_decoy):
         return SCH_MATCH_DECOY
@@ -204,8 +218,12 @@ def submit_pick(session: SCHSession, player_pick: object) -> dict:
     session.matched = matched
     session.submitted = True
 
+    from gtlab.ui.nudges import SCH_MATCH_FOCAL
+    kind = match_kind(puzzle, player_pick)
     if matched:
         session.matches_won += 1
+    # The streak behind the convergence note counts matches on the crowd's favourite only.
+    if matched and kind == SCH_MATCH_FOCAL:
         session.consecutive_focal_matches += 1
     else:
         session.consecutive_focal_matches = 0
@@ -219,7 +237,7 @@ def submit_pick(session: SCHSession, player_pick: object) -> dict:
         player_pick=player_pick,
         partner_pick=partner,
         consecutive_focal_matches=session.consecutive_focal_matches,
-        match_kind=match_kind(puzzle, player_pick),
+        match_kind=kind,
     )
     session.last_nudge_event = nudge_event
 

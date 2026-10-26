@@ -142,7 +142,10 @@ class TestConsecutiveFocalMatchesCounter:
         # Submit the partner's answer to guarantee a match
         result = submit_pick(session, partner)
 
-        if result.get("matched"):
+        # The streak counts matches on the crowd's favourite answer only (see match_kind).
+        from gtlab.concepts.schelling.sch_loop import match_kind
+        from gtlab.ui.nudges import SCH_MATCH_FOCAL
+        if result.get("matched") and match_kind(puzzle, partner) == SCH_MATCH_FOCAL:
             assert session.consecutive_focal_matches == 1
         else:
             assert session.consecutive_focal_matches == 0
