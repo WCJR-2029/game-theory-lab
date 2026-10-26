@@ -228,7 +228,7 @@ def _render_sidebar() -> tuple[list[str], float, bool]:
         "Notice how different strategies handle honest mistakes."
     )
     noise = st.sidebar.slider(
-        "Move-flip probability",
+        "Chance a move misfires",
         min_value=0.0,
         max_value=0.3,
         value=0.0,
@@ -523,7 +523,7 @@ def render() -> None:
         title="Prisoner's Dilemma",
         subtitle=(
             "Two players, two choices - cooperate or defect. "
-            "Neither knows what the other will do. Repeated play changes everything."
+            "Neither knows what the other will do, and you face each opponent for ten rounds, not one."
         ),
     )
 

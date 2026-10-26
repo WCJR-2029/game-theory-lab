@@ -40,7 +40,7 @@ CONCEPTS: list[dict] = [
         "title": "Prisoner's Dilemma",
         "tagline": (
             "Two players, two choices — cooperate or defect. "
-            "Neither knows what the other will do. Repeated play changes everything."
+            "Neither knows what the other will do, and you face each opponent for ten rounds, not one."
         ),
         "progression": (
             "The core dilemma: cooperate or betray, "
@@ -54,11 +54,10 @@ CONCEPTS: list[dict] = [
         "title": "Stag Hunt",
         "tagline": (
             "Hunting the stag together beats hunting hare alone — "
-            "but only if you both show up. Talk is cheap. Trust is the question."
+            "but only if you both show up. Before you hunt, you each say what you'll do."
         ),
         "progression": (
-            "Now you can talk before you move — "
-            "but announcements are free, so trust is still the hard part."
+            "Now you can talk before you move. How much is a promise worth?"
         ),
         "render": _sh_render,
         "available": True,
@@ -68,11 +67,11 @@ CONCEPTS: list[dict] = [
         "title": "Chicken",
         "tagline": (
             "Two players on a collision course. Swerve and look timid; go Straight and win — "
-            "unless you both do, and then you both crash. Nerve is easy. Commitment is harder."
+            "unless you both do, and then you both crash. And you can throw away your steering wheel."
         ),
         "progression": (
-            "Now you can make a threat you genuinely cannot take back — "
-            "and that changes everything."
+            "Now you can make a threat you genuinely cannot take back. "
+            "What does that do to the other driver?"
         ),
         "render": _chk_render,
         "available": True,
@@ -96,8 +95,7 @@ CONCEPTS: list[dict] = [
         "title": "Ultimatum & Dictator",
         "tagline": (
             "One player proposes how to split a prize; the other accepts or rejects — "
-            "and rejection means both get nothing. Cold logic says take any offer. "
-            "Fairness says otherwise."
+            "and rejection means both get nothing. What would you accept?"
         ),
         "progression": (
             "Now one side proposes and the other can punish — "
@@ -110,13 +108,11 @@ CONCEPTS: list[dict] = [
         "key": "mixed_strategies",
         "title": "Matching Pennies & RPS",
         "tagline": (
-            "You and an opponent, move by move. "
-            "Any pattern you fall into gets read and punished. "
-            "The only safe play is genuine randomness - which turns out to be harder than it sounds."
+            "You and an opponent, move by move, each trying to call the other's next move. "
+            "How long can you stay unpredictable?"
         ),
         "progression": (
-            "Now your only edge is being unreadable — "
-            "and pure randomness is harder to pull off than it sounds."
+            "Now every move has a counter. Can they see yours coming?"
         ),
         "render": _ms_render,
         "available": True,

@@ -253,7 +253,7 @@ def _render_sh_sidebar() -> tuple[list[str], float, bool]:
         "Notice how noise interacts with trust — a slip looks just like a betrayal."
     )
     noise = st.sidebar.slider(
-        "Move-flip probability",
+        "Chance a move misfires",
         min_value=0.0,
         max_value=0.3,
         value=0.0,
@@ -608,7 +608,7 @@ def _render_sh_debrief(arena: SHArenaState, progress: dict) -> None:
     elif nudge_state == NudgeState.PROGRESSING:
         st.caption(
             f"({exp} match{'es' if exp != 1 else ''} completed. "
-            "What happens when you add Mystery mode and try to read the announcements?)"
+            "What happens when you turn on Mystery opponents and try to read the announcements?)"
         )
 
     # E4: chart-only leaderboard on debrief (no redundant table)
@@ -662,7 +662,7 @@ def render() -> None:
     # --- Main header ---
     app_header(
         "Stag Hunt",
-        "Two hunters, one choice — hunt together or go it alone. The announcement comes first. Trust is the question.",
+        "Two hunters, one choice — hunt together or go it alone. The announcement comes first.",
     )
 
     arena: SHArenaState | None = st.session_state[_KEY_ARENA]

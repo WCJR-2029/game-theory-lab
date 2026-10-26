@@ -263,7 +263,7 @@ def _render_chk_sidebar() -> tuple[list[str], float, bool, int]:
         "A committed Straight stays Straight — commitment is noise-proof."
     )
     noise = st.sidebar.slider(
-        "Move-flip probability",
+        "Chance a move misfires",
         min_value=0.0,
         max_value=0.3,
         value=0.0,

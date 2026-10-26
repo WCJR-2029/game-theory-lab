@@ -137,7 +137,7 @@ class TestMenuProgression:
         at = _at_menu()
         assert not at.exception
         all_md = " ".join(m.value for m in at.markdown)
-        assert "unreadable" in all_md.lower() or "randomness" in all_md.lower(), (
+        assert "every move has a counter" in all_md.lower(), (
             f"Mixed Strategies progression phrase not found. First 500 chars: {all_md[:500]}"
         )
 

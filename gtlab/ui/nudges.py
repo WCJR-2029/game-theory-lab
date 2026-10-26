@@ -857,8 +857,7 @@ _MS_NUDGES: dict[str, dict] = {
     MS_NUDGE_ROUND_START: {
         "headline": "Pick a move. Any move.",
         "body": (
-            "In this game there's no move that beats all others - each one has a counter. "
-            "The only unexploitable strategy is genuine randomness. "
+            "In this game every move has a counter - nothing beats everything. "
             "Play a few rounds and notice how the opponent starts reading you."
         ),
     },

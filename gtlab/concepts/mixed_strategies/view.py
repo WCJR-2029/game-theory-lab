@@ -197,8 +197,8 @@ def _render_setup_screen(
     app_header(
         title="Matching Pennies & RPS",
         subtitle=(
-            "You and an opponent, move by move. "
-            "Any pattern you fall into can be read — and punished."
+            "You and an opponent, move by move, "
+            "each trying to call the other's next move."
         ),
     )
 
