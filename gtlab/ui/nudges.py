@@ -356,9 +356,10 @@ _CHK_NUDGES: dict[str, dict] = {
     CHK_NUDGE_MUTUAL_SWERVE: {
         "headline": "Both swerved. Nobody won, nobody crashed.",
         "body": (
-            "The cautious equilibrium. Nobody claimed the win, but nobody paid the crash price either. "
-            "This is one of two stable outcomes in Chicken — the other being one player yielding "
-            "to the other's aggression. Notice how it feels: relief, or frustration?"
+            "Nobody claimed the win, but nobody paid the crash price either. Notice the pull, though: "
+            "if you were sure they'd swerve again, going Straight would take the round, and the same "
+            "is true from their side. That's why this calm is fragile. The outcomes that hold are "
+            "the lopsided ones, where one player yields and the other doesn't."
         ),
     },
     CHK_NUDGE_VS_HAWK: {
