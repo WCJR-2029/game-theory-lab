@@ -2,7 +2,8 @@
 The end-of-run "What just happened in there" text must agree with the result banner.
 
 Bugs this guards (Prisoner's Dilemma, Stag Hunt, Chicken all share the shape):
-  - the best *bot* was described as finishing "at the top" even when the human came first;
+  - the best *bot* was described as finishing "at the top" even when the human came first (and, on a tie, as
+    finishing "behind you");
   - a bot could get two sentences ("Always Defect finished at the top ... Always Defect landed near the top");
   - "sank" / "finished low" fired for the middle rank of an odd-sized table (4th of 7).
 """
@@ -74,6 +75,22 @@ class TestHumanFirst:
         top_bot = roster[0]
         text = reveal(_rows([HUMAN_LABEL] + roster))
         assert top_bot in text
+
+
+class TestTie:
+    def test_tied_with_the_human_is_not_behind(self, game):
+        """Empty-roster Chicken ended 0-0 with Dove: the banner said "Top of the table", the text "behind you"."""
+        reveal, roster = game
+        rows = _rows([HUMAN_LABEL, roster[0]])
+        rows[1]["total_score"] = rows[0]["total_score"]
+        text = reveal(rows)
+        assert "behind you" not in text, text
+        assert f"{roster[0]} tied with you at the top" in text, text
+
+    def test_clear_second_still_reads_behind_you(self, game):
+        reveal, roster = game
+        text = reveal(_rows([HUMAN_LABEL, roster[0]]))
+        assert "behind you" in text, text
 
 
 class TestOneSentencePerBot:

@@ -122,8 +122,12 @@ def top_bot_lead(rows: list[dict], name: str) -> str:
     """Opening clause for the best bot's reveal sentence.
 
     'X finished at the top' only when the bot really came first; when the
-    player came first the best bot is second, and the text says so.
+    player came first the best bot is second, and the text says so.  On a
+    level score the player is listed first and the banner says "Top of the
+    table", so the bot tied with them rather than finishing behind.
     """
-    if rows and rows[0]["is_human"]:
+    if len(rows) > 1 and rows[0]["is_human"]:
+        if rows[1]["total_score"] == rows[0]["total_score"]:
+            return f"{name} tied with you at the top"
         return f"{name} finished second, behind you"
     return f"{name} finished at the top"
