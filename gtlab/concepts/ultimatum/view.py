@@ -519,17 +519,22 @@ def _render_active_round(arena: ULTArenaState, progress: dict) -> None:
     opp_display = arena.display_names[arena.current_opponent_idx]
     round_num = arena.round_idx + 1
 
-    # Round header
-    mode_label = "Dictator" if dictator else "Ultimatum"
-    role_label = "Proposer" if role == ROLE_PROPOSER else "Responder"
-    section_title(f"Round {round_num} of {ULT_SESSION_LENGTH} — {mode_label}")
+    awaiting_next = st.session_state.get(_KEY_AWAITING_NEXT, False)
+
+    # Round header.  While a result is showing, the state has already moved on to the
+    # next round, so the header names the round the result belongs to.
+    if awaiting_next and arena.last_role is not None:
+        header_round, header_role, header_dictator = arena.round_idx, arena.last_role, arena.last_dictator
+    else:
+        header_round, header_role, header_dictator = round_num, role, dictator
+    mode_label = "Dictator" if header_dictator else "Ultimatum"
+    role_label = "Proposer" if header_role == ROLE_PROPOSER else "Responder"
+    section_title(f"Round {header_round} of {ULT_SESSION_LENGTH} — {mode_label}")
     st.markdown(
         f"<div style='font-size:1.05rem;font-weight:600;color:#E2E6EA;margin-bottom:0.4rem;'>"
         f"You are: {role_label}</div>",
         unsafe_allow_html=True,
     )
-
-    awaiting_next = st.session_state.get(_KEY_AWAITING_NEXT, False)
 
     if awaiting_next:
         # Show outcome of last round

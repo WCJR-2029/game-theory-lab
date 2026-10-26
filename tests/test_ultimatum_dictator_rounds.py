@@ -130,3 +130,26 @@ def test_app_shows_the_dictator_round_from_the_deciding_side():
     page = " ".join(m.value for m in at.markdown) + " ".join(c.value for c in at.caption)
     assert "your split stood" in page, page
     assert "They couldn't say no" in page, page
+
+
+def _header(at) -> str:
+    return " ".join(m.value for m in at.markdown if "Round " in m.value or "You are:" in m.value)
+
+
+def test_the_result_sits_under_the_header_of_the_round_it_belongs_to():
+    """Bug this guards: after you acted, the header already named the next round ("Round 2 of 8", "You are:
+    Responder") above the result of the round you had just played as proposer."""
+    at = _start_ultimatum()
+    assert "Round 1 of 8" in _header(at) and "Proposer" in _header(at)
+
+    at.button(key="ult_btn_propose").click()
+    at.run()
+
+    header = _header(at)
+    assert "Round 1 of 8" in header and "You are: Proposer" in header, header
+    assert "Round 2" not in header and "Responder" not in header, header
+
+    at.button(key="ult_btn_next_round").click()
+    at.run()
+    header = _header(at)
+    assert "Round 2 of 8" in header and "You are: Responder" in header, header
