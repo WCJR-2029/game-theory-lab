@@ -38,7 +38,7 @@ HOW_IT_WORKS = (
     "After each reveal, you see what a typical crowd tends to gravitate toward "
     "(these distributions are illustrative, not empirical percentages from surveys). "
     "<strong>Hard mode</strong> adds puzzles where there's a tempting logical answer "
-    "that sounds clever — but loses to the obvious one almost every time."
+    "that sounds clever — but draws fewer matches than the obvious one."
 )
 
 WHAT_TO_WATCH = (

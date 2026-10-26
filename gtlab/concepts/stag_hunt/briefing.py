@@ -12,8 +12,8 @@ STORY = (
 
 HOW_IT_WORKS = (
     "Each round has two steps. "
-    "First, your opponent announces whether they plan to hunt Stag or Hare — "
-    "but that announcement is just words, and some bots bluff. "
+    "First, you and your opponent each announce whether you plan to hunt Stag or Hare — "
+    "but announcements are just words, and some bots bluff. "
     "Then you both commit to an actual move. "
     "You see their announcement before you commit; they see yours too. "
     "Plain payoffs: if you both commit Stag, you each earn the best outcome — "
