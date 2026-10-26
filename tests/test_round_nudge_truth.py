@@ -7,9 +7,12 @@ mutual Stag; you had hunted Hare and they came home with nothing. That round now
 what you announced: Stag (you bluffed) or Hare (you both did what you said, and they went Stag anyway).
 
 The last two tests classify every reachable round in Stag Hunt, Chicken and the Prisoner's Dilemma. CLAIMS lists, for
-each nudge, a phrase from its copy and the facts that phrase asserts about the round. The test checks the phrase is
-still in the copy, so the table cannot drift from the text, and that the facts hold for every round that gets the
-nudge.
+each nudge, a phrase from its copy and the facts that phrase asserts about the round's moves, announcements and
+commitments. One test checks those facts hold for every round that gets the nudge; the other checks each phrase is
+still in the copy, so the table cannot drift from the text.
+
+What they do not check: the rest of each copy, claims about intent (the classifiers cannot see a noise flip of the
+opponent's move, so a misfire reads the same as a choice) and claims about theory (whether an outcome is stable).
 """
 
 from __future__ import annotations
@@ -184,7 +187,7 @@ GAMES = {
 
 
 @pytest.mark.parametrize("game", sorted(GAMES))
-def test_no_nudge_contradicts_its_round(game):
+def test_no_nudge_contradicts_the_moves_of_its_round(game):
     rounds, claims, get_text = GAMES[game]
     wrong = []
     for r, event in rounds():
@@ -198,7 +201,7 @@ def test_no_nudge_contradicts_its_round(game):
 
 
 @pytest.mark.parametrize("game", sorted(GAMES))
-def test_claims_table_matches_the_copy(game):
+def test_claims_table_phrases_appear_in_the_copy(game):
     rounds, claims, get_text = GAMES[game]
     chosen = {event for _, event in rounds() if event is not None}
     assert chosen == set(claims), f"chosen {sorted(chosen)}, table {sorted(claims)}"

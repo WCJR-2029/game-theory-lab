@@ -7,7 +7,9 @@ moved yet cooperated through a whole match against Always Defect and lost 0-50 w
 
 The tooltip now names the move, worked out when the button is drawn. Each test reads the tooltip from the running app,
 then plays the match out on a copy of the same arena and records the move passed in for every round, so the tooltip
-is checked against what the button actually does, before a first move and after each possible first move.
+is checked against what the button actually does, before a first move and after each possible first move. Before a
+first move the expected default is written out here (Cooperate, Stag, Swerve), not taken from the code under test,
+and in Chicken every auto-played round must keep the wheel, as the tooltip says.
 """
 
 from __future__ import annotations
@@ -55,17 +57,17 @@ GAMES = {
     "iterated_pd": dict(
         prefix="pd", arena_key="pd_arena", module=game_loop, inner="step_round",
         fast_forward=game_loop.fast_forward_match, labels={COOPERATE: "Cooperate", DEFECT: "Defect"},
-        play=_pd_move, keeps_wheel=False,
+        default="Cooperate", play=_pd_move, keeps_wheel=False,
     ),
     "stag_hunt": dict(
         prefix="sh", arena_key="sh_arena", module=sh_loop, inner="commit_move",
         fast_forward=sh_loop.fast_forward_sh_match, labels={COOPERATE: "Stag", DEFECT: "Hare"},
-        play=_sh_move, keeps_wheel=False,
+        default="Stag", play=_sh_move, keeps_wheel=False,
     ),
     "chicken": dict(
         prefix="chk", arena_key="chk_arena", module=chk_loop, inner="play_round",
         fast_forward=chk_loop.fast_forward_chk_match, labels={COOPERATE: "Swerve", DEFECT: "Straight"},
-        play=_chk_move, keeps_wheel=True,
+        default="Swerve", play=_chk_move, keeps_wheel=True,
     ),
 }
 
@@ -87,20 +89,25 @@ def _start(concept, prefix) -> AppTest:
     return at
 
 
-def _moves_played_out(arena, game, monkeypatch) -> list:
-    """Play the current match out on a copy of the arena; return the move passed in for each round."""
-    played = []
+def _moves_played_out(arena, game, monkeypatch) -> tuple[list, list]:
+    """Play the current match out on a copy of the arena.
+
+    Returns the move passed in for each round, and for each round whether the player had thrown the wheel
+    (Chicken only; always False elsewhere).
+    """
+    played, wheel_thrown = [], []
     real = getattr(game["module"], game["inner"])
 
     def recording(state, move):
         played.append(move)
+        wheel_thrown.append(getattr(state, "player_committed_this_round", False))
         return real(state, move)
 
     clone = copy.deepcopy(arena)
     with monkeypatch.context() as m:
         m.setattr(game["module"], game["inner"], recording)
         game["fast_forward"](clone)
-    return played
+    return played, wheel_thrown
 
 
 @pytest.mark.parametrize("concept, first", CASES, ids=[f"{c}-{f or 'no_move_yet'}" for c, f in CASES])
@@ -112,14 +119,17 @@ def test_tooltip_names_the_move_play_out_plays(concept, first, monkeypatch):
         assert not at.exception
 
     tooltip = at.button(key=f"{game['prefix']}_btn_fast_forward").proto.help
-    played = _moves_played_out(at.session_state[game["arena_key"]], game, monkeypatch)
+    played, wheel_thrown = _moves_played_out(at.session_state[game["arena_key"]], game, monkeypatch)
 
     assert played, "playing the match out should play at least one round"
     assert len(set(played)) == 1, f"play-out should repeat one move, played {played}"
     label = game["labels"][played[0]]
     other = next(name for name in game["labels"].values() if name != label)
-    if first is not None:
+    if first is None:
+        assert label == game["default"], f"before a first move play-out should play {game['default']}"
+    else:
         assert label == first, "play-out repeats the move just played (noise is off)"
+    assert not any(wheel_thrown), "play-out should keep the wheel in every round"
 
     text = tooltip.lower()
     if first is None:
