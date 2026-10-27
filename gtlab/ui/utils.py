@@ -130,11 +130,16 @@ def standings_halves(rows: list[dict]) -> tuple[set[str], set[str]]:
 
     Halves are counted over the whole table, human included, the same way the
     result banner ranks the player.  The middle rank of an odd-sized table is
-    in neither half, so 4th of 7 is never called near the top or low.
+    in neither half, so 4th of 7 is never called near the top or low; nor is a
+    bot on the same score as someone in the other half (the chart shows level
+    bars), whichever way the tie-break ordered them.
     """
     n = len(rows)
-    top = {r["name"] for r in rows[:max(1, n // 2)] if not r["is_human"]}
-    bottom = {r["name"] for r in rows[(n + 1) // 2:] if not r["is_human"]}
+    top_end, bottom_start = max(1, n // 2), (n + 1) // 2
+    top = {r["name"] for r in rows[:top_end] if not r["is_human"]
+           and all(r["total_score"] > other["total_score"] for other in rows[top_end:])}
+    bottom = {r["name"] for r in rows[bottom_start:] if not r["is_human"]
+              and all(r["total_score"] < other["total_score"] for other in rows[:bottom_start])}
     return top, bottom
 
 

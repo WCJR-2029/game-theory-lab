@@ -5,7 +5,8 @@ Bugs this guards (Prisoner's Dilemma, Stag Hunt, Chicken all share the shape):
   - the best *bot* was described as finishing "at the top" even when the human came first (and, on a tie, as
     finishing "behind you");
   - a bot could get two sentences ("Always Defect finished at the top ... Always Defect landed near the top");
-  - "sank" / "finished low" fired for the middle rank of an odd-sized table (4th of 7).
+  - "sank" / "finished low" fired for the middle rank of an odd-sized table (4th of 7), and for a bot on the same score
+    as an entrant in the top half (and "near the top" for one level with the bottom half).
 """
 
 from __future__ import annotations
@@ -150,6 +151,28 @@ class TestMiddleRankIsNotLow:
         text = reveal(rows)
         placed = [s for s in _sentences(text) if bot in s and (LOW_CLAIM.search(s) or HIGH_CLAIM.search(s))]
         assert not placed, f"{bot} at {mid + 1} of {len(order)}: {text}"
+
+    @pytest.mark.parametrize("reveal_name, roster", [
+        ("prisoners_dilemma", DEFAULT_SELECTED), ("stag_hunt", SH_DEFAULT_SELECTED), ("chicken", CHK_DEFAULT_SELECTED),
+    ])
+    def test_level_with_someone_across_the_middle_is_neither_high_nor_low(self, reveal_name, roster):
+        """A bot on the same score as an entrant in the other half was called "finished low" (or "near the top")."""
+        reveal, _ = GAMES[reveal_name]
+        for bot in roster:
+            others = [b for b in roster if b != bot]
+            for at in range(1, len(others) + 1):
+                order = [HUMAN_LABEL] + others
+                order.insert(at, bot)
+                rows = _rows(order)
+                n = len(rows)
+                level = range(max(1, n // 2) - 1, (n + 1) // 2 + 1)    # the last top rank to the first bottom rank
+                if bot != order[0] and order.index(bot) in level:
+                    for i in level:
+                        rows[i]["total_score"] = 40
+                    text = reveal(rows)
+                    placed = [s for s in _sentences(text)
+                              if _mentions(s, bot, list(roster)) and (LOW_CLAIM.search(s) or HIGH_CLAIM.search(s))]
+                    assert not placed, f"{bot} level with the other half at {at + 1} of {n}: {text}"
 
     def test_bottom_rank_still_sinks(self):
         rest = [b for b in DEFAULT_SELECTED if b != "Always Defect"]
