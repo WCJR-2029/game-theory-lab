@@ -516,7 +516,26 @@ def leaderboard_chart(
     highlight_name: str = ">> YOU <<",
     height: int = 220,
 ) -> None:
-    """Render an Altair horizontal bar chart for standings.
+    """Render the standings chart (see leaderboard_chart_spec), or a plain fallback without Altair."""
+    if not rows:
+        st.caption("No standings yet.")
+        return
+    if not _ALTAIR_OK:
+        _fallback_df = pd.DataFrame({
+            "Player": [r["name"] for r in rows],
+            "Score":  [r["score"] for r in rows],
+        }).set_index("Player")
+        st.bar_chart(_fallback_df, height=height, width="stretch")
+        return
+    st.altair_chart(leaderboard_chart_spec(rows, highlight_name, height), width="stretch")
+
+
+def leaderboard_chart_spec(
+    rows: list[dict],
+    highlight_name: str = ">> YOU <<",
+    height: int = 220,
+):
+    """Build the Altair horizontal bar chart for standings (leaderboard_chart renders it).
 
     Parameters
     ----------
@@ -528,21 +547,9 @@ def leaderboard_chart(
     height:
         Chart height in pixels.
 
-    Falls back to st.bar_chart if Altair is unavailable (graceful degradation).
+    The chart grows with the number of bars (at least 30 px each) and never hides a name:
+    with a fixed height the library dropped every second label on an eight-bar chart.
     """
-    if not rows:
-        st.caption("No standings yet.")
-        return
-
-    if not _ALTAIR_OK:
-        # Graceful fallback — plain Streamlit bar chart
-        _fallback_df = pd.DataFrame({
-            "Player": [r["name"] for r in rows],
-            "Score":  [r["score"] for r in rows],
-        }).set_index("Player")
-        st.bar_chart(_fallback_df, height=height, width="stretch")
-        return
-
     df = pd.DataFrame(rows)
 
     # Normalise column names — accept "name"/"player" and "score"/"total_score"
@@ -583,6 +590,8 @@ def leaderboard_chart(
                     domainColor="#2A313C",
                     tickColor="#2A313C",
                     title=None,
+                    labelOverlap=False,
+                    labelLimit=240,
                     labelFontWeight=alt.ExprRef(
                         "datum.value == '" + highlight_name + "' ? 700 : 400"
                     ),
@@ -599,7 +608,7 @@ def leaderboard_chart(
             ],
         )
         .properties(
-            height=height,
+            height=max(height, 30 * len(df)),
             background=_BG,
             padding={"left": 8, "right": 16, "top": 8, "bottom": 8},
         )
@@ -613,8 +622,7 @@ def leaderboard_chart(
             titleFont="Inter, sans-serif",
         )
     )
-
-    st.altair_chart(chart, width="stretch")
+    return chart
 
 
 # ---------------------------------------------------------------------------
