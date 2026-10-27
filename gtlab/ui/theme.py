@@ -525,7 +525,7 @@ def leaderboard_chart(
             "Player": [r["name"] for r in rows],
             "Score":  [r["score"] for r in rows],
         }).set_index("Player")
-        st.bar_chart(_fallback_df, height=height, width="stretch")
+        st.bar_chart(_fallback_df, height=max(height, 30 * len(rows)), width="stretch")
         return
     st.altair_chart(leaderboard_chart_spec(rows, highlight_name, height), width="stretch")
 

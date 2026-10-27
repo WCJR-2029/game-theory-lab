@@ -30,7 +30,7 @@ def test_prisoners_dilemma_line():
 
     text = your_play_text(state)
 
-    assert text.startswith("You chose Cooperate in 10 of 20 rounds; 9 of those rounds were played out for you."), text
+    assert text.startswith("You chose Cooperate in 10 of 20 rounds. 9 of the 20 rounds were played out for you."), text
     assert "You scored most against Tit for Tat (you 30, them 30) and least against Always Defect (you 10, them 10)." in text, text
 
 
@@ -47,9 +47,9 @@ def test_stag_hunt_line_counts_what_you_announced():
 
     text = your_play_text(state)
 
-    assert text.startswith(
-        "You chose to hunt Stag in 9 of 10 rounds and did what you announced in 9 of them; "
-        "8 of those rounds were played out for you."), text
+    assert text == (
+        "You chose to hunt Stag in 9 of 10 rounds and kept your announcement in 9 of 10. "
+        "8 of the 10 rounds were played out for you. Against Trusting: you 39, them 36."), text
 
 
 def test_chicken_line_counts_thrown_wheels():
@@ -65,8 +65,8 @@ def test_chicken_line_counts_thrown_wheels():
     text = your_play_text(state)
 
     assert text.startswith(
-        "You chose to swerve in 10 of 20 rounds and threw away the wheel 1 time; "
-        "19 of those rounds were played out for you."), text
+        "You chose to swerve in 10 of 20 rounds and threw away the wheel 1 time. "
+        "19 of the 20 rounds were played out for you."), text
     assert "scored most against Dove" in text and "least against Hawk" in text, text
 
 
@@ -77,7 +77,17 @@ def test_noise_does_not_change_what_you_chose():
     for _ in range(game_loop.MATCH_LENGTH):
         game_loop.step_round(state, C)
     assert state.run_complete
-    assert your_play_text(state).startswith("You chose Cooperate in 10 of 10 rounds."), your_play_text(state)
+    assert your_play_text(state).startswith(
+        "You chose Cooperate in 10 of 10 rounds. You played every round yourself."), your_play_text(state)
+
+
+def test_equal_scores_are_reported_too():
+    from gtlab.concepts.prisoners_dilemma.view import your_play_text
+
+    state = game_loop.init_arena(["Tit for Tat", "Always Cooperate"], noise=0.0, mystery_mode=False)
+    while not state.run_complete:
+        game_loop.step_round(state, C)
+    assert your_play_text(state).endswith("You scored 30 against every opponent."), your_play_text(state)
 
 
 def test_the_debrief_banner_shows_the_line():

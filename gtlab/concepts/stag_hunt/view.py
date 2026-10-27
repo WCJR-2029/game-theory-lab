@@ -592,7 +592,8 @@ def your_play_text(arena: SHArenaState) -> str:
     stag = sum(1 for move, _, _ in arena.round_log if move == COOPERATE)
     honest = sum(1 for _, kept, _ in arena.round_log if kept)
     return your_play_line(
-        f"You chose to hunt Stag in {stag} of {rounds} rounds and did what you announced in {honest} of them", arena
+        f"You chose to hunt Stag in {stag} of {rounds} rounds and kept your announcement in {honest} of {rounds}",
+        arena,
     )
 
 
