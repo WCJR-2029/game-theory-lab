@@ -11,6 +11,9 @@ from __future__ import annotations
 
 from streamlit.testing.v1 import AppTest
 
+from gtlab.concepts.schelling.sch_loop import current_puzzle
+from gtlab.concepts.schelling.view import int_bounds
+
 
 def _session_until(kind: str) -> AppTest:
     """Start a session on a category that has the kind of puzzle we want, and advance to the first one."""
@@ -50,11 +53,13 @@ def test_an_integer_pick_starts_empty_and_locks_in_only_when_entered():
     assert box.value is None, "no default number to lock in by accident"
     assert _submit(at).proto.disabled
 
-    box.set_value(box.proto.min + 2).run()
+    lowest = int_bounds(current_puzzle(at.session_state["sch_session"]).choice_space)[0]
+    pick = (1 if lowest is None else lowest) + 2
+    box.set_value(pick).run()
     assert not _submit(at).proto.disabled
     _submit(at).click()
     at.run()
-    assert f"You picked {int(box.proto.min) + 2}" in " ".join(m.value for m in at.markdown)
+    assert f"You picked {pick}" in " ".join(m.value for m in at.markdown)
 
 
 def test_a_split_starts_empty_too():

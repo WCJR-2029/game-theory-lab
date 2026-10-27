@@ -13,9 +13,12 @@ Fixes from the outside review of the round-6 changes.
 
 from __future__ import annotations
 
+import re
+
 import pytest
 from streamlit.testing.v1 import AppTest
 
+from gtlab.concepts.schelling.bank import PUZZLE_BANK
 from gtlab.concepts.schelling.sch_loop import current_puzzle
 from tests.test_schelling_number_entry import _session_until, _submit
 
@@ -110,32 +113,76 @@ def _errors(at) -> str:
     return " ".join(e.value for e in at.error)
 
 
-@pytest.mark.parametrize("kind", ["int", "split"])
-def test_a_number_outside_the_range_is_named_and_never_locked_in(kind):
-    at = _session_until(kind)
-    cs = current_puzzle(_session(at)).choice_space
-    prefix = "sch_input_int_" if kind == "int" else "sch_split_mine_"
-    lo, hi = (cs.lo, cs.hi) if kind == "int" else (0, cs.total)
+def _session_on(puzzle_id) -> AppTest:
+    """A Schelling session whose current puzzle is puzzle_id."""
+    at = AppTest.from_file("app.py", default_timeout=30)
+    at.run()
+    at.button(key="menu_play_schelling").click()
+    at.run()
+    at.button(key="sch_start_session").click()
+    at.run()
+    session = _session(at)
+    session.puzzle_queue[session.current_index] = next(p for p in PUZZLE_BANK if p.id == puzzle_id)
+    at.run()
+    return at
+
+
+NUMBER_CASES = [
+    # puzzle, label shown, typed numbers that are no pick, typed numbers that are
+    ("num_dozen", "Your pick (1-12):", [-5, 0, 13], [1, 12]),
+    ("num_round_thousands", "Your pick (1,000-1,000,000):", [999, 1_000_001], [1_000, 1_000_000]),
+    ("num_any_positive", "Your pick (1 or more):", [0, -3], [1, 50_000]),           # "There is no upper limit."
+    ("num_negative", "Your pick (any whole number):", [], [-50_000, -1, 0, 50_000]),  # "positive, negative, or zero"
+    ("sp_three_coins", "My share", [-1, 4], [0, 3]),
+]
+
+
+@pytest.mark.parametrize("puzzle_id, label, rejected, accepted", NUMBER_CASES, ids=[c[0] for c in NUMBER_CASES])
+def test_every_typed_number_is_judged_against_the_puzzle(puzzle_id, label, rejected, accepted):
+    at = _session_on(puzzle_id)
+    split = puzzle_id.startswith("sp_")
+    prefix = "sch_split_mine_" if split else "sch_input_int_"
 
     def box():
         return next(n for n in at.number_input if n.key.startswith(prefix))
 
-    box().set_value(lo + 1).run()
-    assert not _submit(at).proto.disabled and not _errors(at)
-
-    for outside in (lo - 6, hi + 6):
-        if hi >= 10_000 and outside > hi:
-            continue  # the open puzzle has no top
-        box().set_value(outside).run()
+    assert box().label == label
+    for typed in rejected:
+        box().set_value(typed).run()
         assert not at.exception
-        assert _submit(at).proto.disabled, f"{outside} is on screen; nothing else may be locked in"
-        assert str(lo) in _errors(at), f"say what is allowed: {_errors(at)!r}"
+        assert _submit(at).proto.disabled, f"{typed} is on screen; nothing else may be locked in"
+        assert _errors(at), f"say why {typed} is no pick"
         _submit(at).click()  # a click can still arrive
         at.run()
         assert not _session(at).submitted and _session(at).player_pick is None
+    for typed in accepted:
+        box().set_value(typed).run()
+        assert not _submit(at).proto.disabled and not _errors(at), typed
 
-    box().set_value(lo + 2).run()
-    assert not _submit(at).proto.disabled and not _errors(at), "a valid number clears the note"
+    _submit(at).click()
+    at.run()
+    total = current_puzzle(_session(at)).choice_space.total if split else None
+    assert _session(at).player_pick == ((accepted[-1], total - accepted[-1]) if split else accepted[-1])
+
+
+def test_the_number_notes_name_the_range():
+    from gtlab.concepts.schelling.view import int_problem
+
+    by_id = {p.id: p.choice_space for p in PUZZLE_BANK}
+    assert int_problem(by_id["num_dozen"], 13) == "Pick a whole number from 1 to 12."
+    assert int_problem(by_id["num_round_thousands"], 5) == "Pick a whole number from 1,000 to 1,000,000."
+    assert int_problem(by_id["num_prime"], 1) == "Pick a whole number of 2 or more."
+    assert int_problem(by_id["num_prime"], 99_999) is None, "any prime: no upper limit"
+
+
+def test_only_no_limit_puzzles_use_the_no_limit_bound():
+    """A bound of +/-10,000 is shown and enforced as no limit, so the puzzle's own words must say there is none."""
+    from gtlab.concepts.schelling.model import IntegerRange
+
+    for p in PUZZLE_BANK:
+        cs = p.choice_space
+        if isinstance(cs, IntegerRange) and 10_000 in (cs.hi, -cs.lo):
+            assert re.search(r"no upper limit|any whole number|any positive whole number", p.prompt, re.I), p.id
 
 
 @pytest.mark.parametrize("plays", [2, 3, 4])

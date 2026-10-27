@@ -10,9 +10,9 @@ Round flow per rerun
 --------------------
 1. Show the current puzzle prompt.
 2. Take the player's pick using the right input for the choice_space:
-   - IntegerRange  → st.number_input
-   - OptionSet     → st.radio / buttons
-   - Split         → two st.number_input fields that must sum to total
+   - IntegerRange  → st.number_input (checked against the puzzle's range here)
+   - OptionSet     → st.radio
+   - Split         → st.number_input for your share; the stranger's share is the rest
 3. On submit: draw the hidden partner's pick (seeded), show MATCH or NO-MATCH
    with the partner's answer revealed.
 4. After reveal: focal distribution bar, optional decoy explanation, nudge.
@@ -149,52 +149,81 @@ def _render_sch_sidebar(locked: bool = False) -> tuple[bool, list[str]]:
 # ---------------------------------------------------------------------------
 
 
-def _render_integer_range_input(puzzle, submitted: bool) -> object | None:
+_NO_LIMIT = 10_000  # a bound of exactly +/-10,000 in the bank stands for "no limit" ("any positive whole number")
+
+
+def int_bounds(cs: IntegerRange) -> tuple[int | None, int | None]:
+    """(lowest, highest) pick a number puzzle allows; None where the puzzle sets no limit."""
+    return (None if cs.lo == -_NO_LIMIT else cs.lo, None if cs.hi == _NO_LIMIT else cs.hi)
+
+
+def int_problem(cs: IntegerRange, value: int) -> str | None:
+    """Why a typed number can't be this puzzle's pick, or None if it can."""
+    lo, hi = int_bounds(cs)
+    if (lo is None or value >= lo) and (hi is None or value <= hi):
+        return None
+    if hi is None:
+        return f"Pick a whole number of {lo:,} or more."
+    if lo is None:
+        return f"Pick a whole number of {hi:,} or less."
+    return f"Pick a whole number from {lo:,} to {hi:,}."
+
+
+def _int_label(cs: IntegerRange) -> str:
+    lo, hi = int_bounds(cs)
+    if lo is None and hi is None:
+        return "Your pick (any whole number):"
+    if hi is None:
+        return f"Your pick ({lo:,} or more):"
+    if lo is None:
+        return f"Your pick ({hi:,} or less):"
+    return f"Your pick ({lo:,}-{hi:,}):"
+
+
+def _render_integer_range_input(puzzle, submitted: bool, shown: object = None) -> object | None:
     """Render an integer entry for IntegerRange choice spaces.
 
-    The box starts empty and the pick is None until a valid number is entered: a number outside the range is never
-    sent to the app, so a default would be locked in instead of what the player typed.
+    The box starts empty and has no bounds of its own: Streamlit never sends the app a number outside a box's bounds,
+    so the box would show what was typed while the app kept the last valid number, and "Lock in my pick" would lock
+    that in. Every typed number reaches the app instead; one outside the puzzle's range is named here and is no pick.
+    After lock-in (submitted) the box shows the saved pick, `shown`.
     """
     cs: IntegerRange = puzzle.choice_space
-    is_open = cs.hi >= 10_000  # sentinel for the 'effectively unbounded' puzzle
-
-    if is_open:
-        val = st.number_input(
-            "Your pick (any positive whole number):",
-            min_value=1,
-            max_value=None,
-            value=None,
-            step=1,
-            key=f"sch_input_int_{puzzle.id}",
-            disabled=submitted,
-        )
-    else:
-        val = st.number_input(
-            f"Your pick ({cs.lo}-{cs.hi}):",
-            min_value=cs.lo,
-            max_value=cs.hi,
-            value=None,
-            step=1,
-            key=f"sch_input_int_{puzzle.id}",
-            disabled=submitted,
-        )
-    return None if val is None else int(val)
+    val = st.number_input(
+        _int_label(cs),
+        value=shown if submitted else None,
+        step=1,
+        key=f"sch_shown_int_{puzzle.id}" if submitted else f"sch_input_int_{puzzle.id}",
+        disabled=submitted,
+    )
+    if val is None:
+        return None
+    problem = int_problem(cs, int(val))
+    if problem and not submitted:
+        st.error(problem)
+        return None
+    return int(val)
 
 
-def _render_option_set_input(puzzle, submitted: bool) -> object | None:
-    """Render radio buttons for OptionSet choice spaces."""
+def _render_option_set_input(puzzle, submitted: bool, shown: object = None) -> object | None:
+    """Render radio buttons for OptionSet choice spaces. After lock-in the saved pick, `shown`, is selected."""
     cs: OptionSet = puzzle.choice_space
+    options = list(cs.options)
     chosen = st.radio(
         "Choose one:",
-        options=list(cs.options),
-        key=f"sch_input_opt_{puzzle.id}",
+        options=options,
+        index=options.index(shown) if submitted and shown in options else 0,
+        key=f"sch_shown_opt_{puzzle.id}" if submitted else f"sch_input_opt_{puzzle.id}",
         disabled=submitted,
     )
     return chosen
 
 
-def _render_split_input(puzzle, submitted: bool) -> object | None:
-    """Render two number inputs for Split choice spaces (must sum to total)."""
+def _render_split_input(puzzle, submitted: bool, shown: object = None) -> object | None:
+    """Render the share entry for Split choice spaces (the stranger's share is the rest of the total).
+
+    No bounds on the box, as for _render_integer_range_input. After lock-in the saved split, `shown`, is displayed.
+    """
     cs: Split = puzzle.choice_space
 
     st.caption(
@@ -206,29 +235,33 @@ def _render_split_input(puzzle, submitted: bool) -> object | None:
     with col1:
         my_share = st.number_input(
             "My share",
-            min_value=0,
-            max_value=cs.total,
-            value=None,  # empty until a valid share is entered (see _render_integer_range_input)
+            value=shown[0] if submitted and shown else None,
             step=1,
-            key=f"sch_split_mine_{puzzle.id}",
+            key=f"sch_shown_split_{puzzle.id}" if submitted else f"sch_split_mine_{puzzle.id}",
             disabled=submitted,
         )
+    valid = my_share is not None and 0 <= int(my_share) <= cs.total
     with col2:
-        their_share = None if my_share is None else cs.total - int(my_share)
-        st.metric("Stranger's share", "—" if their_share is None else their_share)
+        st.metric("Stranger's share", cs.total - int(my_share) if valid else "—")
+    if my_share is not None and not valid:
+        st.error(f"Your share has to be from 0 to {cs.total}.")
 
-    return None if my_share is None else (int(my_share), their_share)
+    return (int(my_share), cs.total - int(my_share)) if valid else None
 
 
-def _render_player_input(puzzle, submitted: bool) -> object | None:
-    """Dispatch to the right input renderer based on choice_space type."""
+def _render_player_input(puzzle, submitted: bool, shown: object = None) -> object | None:
+    """Dispatch to the right input renderer based on choice_space type.
+
+    After lock-in (submitted) the inputs are disabled and show the saved pick, `shown`: their own state is gone if the
+    player left for the menu and came back.
+    """
     cs = puzzle.choice_space
     if isinstance(cs, IntegerRange):
-        return _render_integer_range_input(puzzle, submitted)
+        return _render_integer_range_input(puzzle, submitted, shown)
     if isinstance(cs, OptionSet):
-        return _render_option_set_input(puzzle, submitted)
+        return _render_option_set_input(puzzle, submitted, shown)
     if isinstance(cs, Split):
-        return _render_split_input(puzzle, submitted)
+        return _render_split_input(puzzle, submitted, shown)
     return None
 
 
@@ -492,7 +525,7 @@ def _render_puzzle_panel(session: SCHSession, progress: dict) -> None:
     # --- Reveal phase: show result + distribution ---
     else:
         # Replay the pick display (disabled — just for context)
-        _render_player_input(puzzle, submitted=True)
+        _render_player_input(puzzle, submitted=True, shown=session.player_pick)
 
         st.divider()
 
