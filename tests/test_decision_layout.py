@@ -77,7 +77,9 @@ def _note_position(at, get_text, event) -> int:
 
 
 def _button_position(at, keys) -> int:
-    return _position(at, lambda el: el.type == "button" and getattr(el, "key", None) in keys)
+    """Where the lowest of these buttons is: each one must be on screen."""
+    return max(_position(at, lambda el, key=key: el.type == "button" and getattr(el, "key", None) == key)
+               for key in keys)
 
 
 DECISION_BUTTONS = {

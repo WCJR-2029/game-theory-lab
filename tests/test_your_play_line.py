@@ -39,6 +39,22 @@ def test_prisoners_dilemma_line():
     assert "You scored most against Tit for Tat (you 30, them 30) and least against Always Defect (you 10, them 10)." in text, text
 
 
+def test_played_out_rounds_are_not_counted_as_your_choices():
+    """Play-out repeating Cooperate must not add to how often you chose Cooperate."""
+    from gtlab.concepts.prisoners_dilemma.view import your_play_text
+
+    state = game_loop.init_arena(["Tit for Tat", "Always Defect"], noise=0.0, mystery_mode=False)
+    game_loop.step_round(state, D)
+    game_loop.step_round(state, C)
+    game_loop.fast_forward_match(state)             # repeats Cooperate for 8 rounds
+    game_loop.fast_forward_match(state)             # match 2 before a first move: Cooperate for 10
+    assert state.run_complete
+
+    assert your_play_text(state).startswith(
+        "You chose Cooperate in 1 of the 2 rounds you played yourself. The other 18 were played out for you."), \
+        your_play_text(state)
+
+
 def test_stag_hunt_line_counts_what_you_announced():
     from gtlab.concepts.stag_hunt.view import your_play_text
 

@@ -181,3 +181,7 @@ class TestScreenHandover:
         _SCREEN_ROUND[prefix](at)
         assert not at.exception
         assert "Match over:" not in _texts(at)
+
+        at.button(key=f"{prefix}_btn_fast_forward").click()
+        at.run()
+        assert f"— on to match 3 of {len(arena.bots)}." in _texts(at), _texts(at)
