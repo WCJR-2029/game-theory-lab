@@ -175,6 +175,8 @@ class TestScreenHandover:
         line = f"Match over: you {you}, {name} {them}"
         assert _texts(at).count(line) == 1, _texts(at)
         assert _texts(at).count("Match over:") == 1
+        # A player missed that a new match had started under the banner: it says so itself.
+        assert f"{line} — on to match 2 of {len(arena.bots)}." in _texts(at), _texts(at)
 
         _SCREEN_ROUND[prefix](at)
         assert not at.exception

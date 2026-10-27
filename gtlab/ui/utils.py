@@ -85,18 +85,18 @@ def running_total(arena) -> int:
 
 
 def match_over_line(arena) -> str | None:
-    """'Match over: you 27, Tit for Tat 24' at the start of the next match.
+    """'Match over: you 27, Tit for Tat 24 — on to match 2 of 6.' at the start of the next match.
 
     A finished match hands straight over to the next opponent, so without
-    this its result (and the last round) is never shown.  Returns None once
-    the first round of the new match has been played, or before any match
-    has finished.
+    this its result (and the last round) is never shown, and the new match
+    starts unannounced.  Returns None once the first round of the new match
+    has been played, or before any match has finished.
     """
     summary = arena.last_match_summary
     if summary is None or arena.run_complete or arena.rounds_this_match > 0:
         return None
     name, you, them = summary
-    return f"Match over: you {you}, {name} {them}"
+    return f"Match over: you {you}, {name} {them} — on to match {arena.current_opponent_idx + 1} of {len(arena.bots)}."
 
 
 def play_out_help(
