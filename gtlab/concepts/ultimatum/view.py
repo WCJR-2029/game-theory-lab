@@ -58,6 +58,7 @@ from gtlab.ui.progress import (
     NudgeState,
 )
 from gtlab.ui.theme import (
+    next_on_ladder_button,
     inject_theme,
     app_header,
     section_title,
@@ -705,6 +706,7 @@ def _render_debrief(arena: ULTArenaState, progress: dict) -> None:
         st.session_state[_KEY_AWAITING_NEXT] = False
         st.session_state.pop("ult_progress_saved", None)  # BUG FIX: clear so next replay increments
         st.rerun()
+    next_on_ladder_button(ULT_CONCEPT_KEY)
 
 
 # ---------------------------------------------------------------------------

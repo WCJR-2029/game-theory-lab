@@ -995,3 +995,29 @@ def arena_reveal(headline: str, body: str) -> None:
 """,
         unsafe_allow_html=True,
     )
+
+
+# ---------------------------------------------------------------------------
+# The ladder: what to play next after a run (ADR-003 order = menu order)
+# ---------------------------------------------------------------------------
+
+
+def next_concept_key(current_key: str) -> str | None:
+    """The next game on the ladder after current_key, or None after the last one."""
+    from gtlab.concepts.registry import CONCEPTS  # imported here: the registry imports the views
+    keys = [c["key"] for c in CONCEPTS if c.get("available", True)]
+    i = keys.index(current_key)
+    return keys[i + 1] if i + 1 < len(keys) else None
+
+
+def next_on_ladder_button(current_key: str) -> None:
+    """A button to the next game on the ladder, or back to the menu after the last one."""
+    from gtlab.concepts.registry import CONCEPTS
+    nxt = next_concept_key(current_key)
+    if nxt is None:
+        label = "Back to the menu"
+    else:
+        label = f"Next on the ladder: {next(c['title'] for c in CONCEPTS if c['key'] == nxt)}"
+    if st.button(label, key=f"{current_key}_next_on_ladder"):
+        st.session_state.active_concept = nxt
+        st.rerun()

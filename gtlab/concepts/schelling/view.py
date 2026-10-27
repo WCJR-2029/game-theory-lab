@@ -54,6 +54,7 @@ from gtlab.ui.progress import (
     NudgeState,
 )
 from gtlab.ui.theme import (
+    next_on_ladder_button,
     inject_theme,
     app_header,
     section_title,
@@ -422,6 +423,7 @@ def _render_session_complete(session: SCHSession, progress: dict) -> None:
         st.session_state[_KEY_SESSION] = None
         st.session_state[_KEY_LAST_NUDGE] = None
         st.rerun()
+    next_on_ladder_button(SCH_CONCEPT_KEY)
 
 
 # ---------------------------------------------------------------------------

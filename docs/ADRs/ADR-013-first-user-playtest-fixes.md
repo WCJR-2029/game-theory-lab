@@ -47,6 +47,12 @@ were fixed under tests. The ones below changed how a game plays or looks, so the
 - **Alternatives.** A per-round history table: rejected, too much for a first-time reader. Advice ("try defecting
   against X"): rejected, constraint 3 (not about winning).
 
+### 4. A next step at the end of every run
+- **Problem.** The end of a run offered only "Play again"; players said there was no clear "you're done" or next step.
+- **Decision.** Each debrief also offers "Next on the ladder: <game>", following the menu order (the ladder of
+  ADR-003); after the last game it offers "Back to the menu". The order is read from the registry, so a new rung
+  joins the ladder by being added to the menu.
+
 ## Declined
 Recorded so they are not re-raised without new evidence.
 - **Resuming a run after a browser refresh.** It would mean persisting the whole arena (RNG and opponent state).

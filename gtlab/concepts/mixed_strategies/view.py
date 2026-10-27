@@ -39,6 +39,7 @@ from gtlab.ui.progress import (
     save_progress,
 )
 from gtlab.ui.theme import (
+    next_on_ladder_button,
     app_header,
     arena_reveal,
     briefing_expander,
@@ -659,6 +660,7 @@ def _render_session_complete(arena: MSArenaState, progress: dict) -> None:
         st.session_state[_KEY_SHOW_SETUP] = True
         st.session_state[_KEY_AWAITING_REVEAL] = False
         st.rerun()
+    next_on_ladder_button(MS_CONCEPT_KEY)
 
 
 # ---------------------------------------------------------------------------

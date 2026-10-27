@@ -29,6 +29,7 @@ from gtlab.ui.progress import (
     get_nudge_state, NudgeState,
 )
 from gtlab.ui.theme import (
+    next_on_ladder_button,
     inject_theme,
     app_header,
     section_title,
@@ -502,6 +503,7 @@ def _render_debrief(arena: ArenaState, progress: dict) -> None:
         st.session_state[_KEY_SHOW_SETUP] = True
         st.session_state[_KEY_LAST_NUDGE] = None
         st.rerun()
+    next_on_ladder_button(CONCEPT_KEY)
 
 
 # ---------------------------------------------------------------------------
