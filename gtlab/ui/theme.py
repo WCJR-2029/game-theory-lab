@@ -855,7 +855,19 @@ def intro_above_fold(
     return bool(clicked)
 
 
-def progression_menu(concepts: list[dict], callbacks: dict) -> None:
+def _played_line(concept: dict, counts: dict) -> str:
+    """'You've played 6 matches' for a menu card, or nothing for a game not played yet."""
+    n = counts.get(concept["key"], 0)
+    if not n or "unit" not in concept:
+        return ""
+    singular, plural = concept["unit"]
+    return (
+        f'\n  <div style="font-size:0.78rem;color:{_ACCENT};margin-top:0.45rem;">'
+        f"You've played {n} {singular if n == 1 else plural}</div>"
+    )
+
+
+def progression_menu(concepts: list[dict], callbacks: dict, progress: dict | None = None) -> None:
     """Render the concept menu as a felt progression ladder.
 
     Shows a brief framing line above the grid ("Six games, each adding one new
@@ -872,7 +884,10 @@ def progression_menu(concepts: list[dict], callbacks: dict) -> None:
     ----------
     concepts:  Ordered list of concept dicts from the registry.
     callbacks: Dict mapping concept key -> zero-argument callable to call on Play.
+    progress:  The anonymous per-game counts (ADR-005); a card with a count says how much
+               you have played that game, so a returning player can see they've been here.
     """
+    counts = (progress or {}).get("concepts", {})
     # Framing line above the grid
     st.markdown(
         '<div style="font-size:0.95rem;color:#8B9299;margin-bottom:1.1rem;">'
@@ -904,7 +919,7 @@ def progression_menu(concepts: list[dict], callbacks: dict) -> None:
               margin-bottom:0.5rem;font-style:italic;">
     {progression_text}
   </div>
-  <div class="concept-card-tagline">{concept["tagline"]}</div>
+  <div class="concept-card-tagline">{concept["tagline"]}</div>{_played_line(concept, counts)}
 </div>
 """,
                     unsafe_allow_html=True,

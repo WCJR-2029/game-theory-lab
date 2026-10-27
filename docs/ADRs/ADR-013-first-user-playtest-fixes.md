@@ -62,6 +62,11 @@ were fixed under tests. The ones below changed how a game plays or looks, so the
 - **Alternatives.** Apply changes mid-run: rejected, a run's standings would mix two rule sets. A confirmation to
   restart on change: rejected as more interruption than a disabled control that says why.
 
+### 6. The menu remembers you
+- **Problem.** A player coming back the next day saw the identical menu, with no sign they had been there.
+- **Decision.** Each menu card shows "You've played N <matches / puzzles / sessions>" from the anonymous per-game
+  counts ADR-005 already keeps; a game not yet played shows nothing. No new data is stored.
+
 ## Declined
 Recorded so they are not re-raised without new evidence.
 - **Resuming a run after a browser refresh.** It would mean persisting the whole arena (RNG and opponent state).

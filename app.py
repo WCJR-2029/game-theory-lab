@@ -76,7 +76,7 @@ def render_menu() -> None:
         return _cb
 
     callbacks = {c["key"]: _make_play_callback(c["key"]) for c in CONCEPTS}
-    progression_menu(CONCEPTS, callbacks)
+    progression_menu(CONCEPTS, callbacks, st.session_state.progress)
 
 
 # ---------------------------------------------------------------------------

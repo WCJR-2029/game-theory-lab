@@ -58,8 +58,8 @@ gate for every concept (it drives each game through real interactions and assert
 ## Progress persistence
 
 The app remembers how much you've played each game (finished matches, puzzles or sessions, depending on
-the game) — **anonymously, per game** — in `~/.gtlab/progress.json`, used only to fade the nudges as you
-gain experience. No personal data is stored. Delete the file any time to reset to a fresh-player experience.
+the game) — **anonymously, per game** — in `~/.gtlab/progress.json`, used to fade the nudges as you gain
+experience and to show on the menu what you've played. No personal data is stored. Delete the file any time to reset to a fresh-player experience.
 
 ---
 

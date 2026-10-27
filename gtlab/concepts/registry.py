@@ -37,6 +37,7 @@ from .mixed_strategies import render as _ms_render
 CONCEPTS: list[dict] = [
     {
         "key": "iterated_pd",
+        "unit": ('match', 'matches'),  # what the progress counter counts for this game
         "title": "Prisoner's Dilemma",
         "tagline": (
             "Two players, two choices — cooperate or defect. "
@@ -51,6 +52,7 @@ CONCEPTS: list[dict] = [
     },
     {
         "key": "stag_hunt",
+        "unit": ('match', 'matches'),  # what the progress counter counts for this game
         "title": "Stag Hunt",
         "tagline": (
             "Hunting the stag together beats hunting hare alone — "
@@ -64,6 +66,7 @@ CONCEPTS: list[dict] = [
     },
     {
         "key": "chicken",
+        "unit": ('match', 'matches'),  # what the progress counter counts for this game
         "title": "Chicken",
         "tagline": (
             "Two players on a collision course. Swerve and look timid; go Straight and win — "
@@ -78,6 +81,7 @@ CONCEPTS: list[dict] = [
     },
     {
         "key": "schelling",
+        "unit": ('puzzle', 'puzzles'),  # what the progress counter counts for this game
         "title": "Schelling Points",
         "tagline": (
             "You and a silent stranger must pick the same answer — "
@@ -92,6 +96,7 @@ CONCEPTS: list[dict] = [
     },
     {
         "key": "ultimatum",
+        "unit": ('session', 'sessions'),  # what the progress counter counts for this game
         "title": "Ultimatum & Dictator",
         "tagline": (
             "One player proposes how to split a prize; the other accepts or rejects — "
@@ -106,6 +111,7 @@ CONCEPTS: list[dict] = [
     },
     {
         "key": "mixed_strategies",
+        "unit": ('session', 'sessions'),  # what the progress counter counts for this game
         "title": "Matching Pennies & RPS",
         "tagline": (
             "You and an opponent, move by move, each trying to call the other's next move. "
