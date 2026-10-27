@@ -56,13 +56,61 @@ def test_settings_are_off_during_a_run(concept, start):
     assert LOCK_NOTE in " ".join(c.value for c in at.sidebar.caption)
 
 
-def test_settings_unlock_when_the_run_is_over():
-    at = _open("iterated_pd")
-    at.button(key="pd_start_run").click()
-    at.run()
-    while not at.session_state["pd_arena"].run_complete:
-        at.button(key="pd_btn_fast_forward").click()
+def _finish(at, concept):
+    """Play the game to its debrief as quickly as possible."""
+    if concept in ("iterated_pd", "stag_hunt", "chicken"):
+        prefix, key = {"iterated_pd": ("pd", "pd_arena"), "stag_hunt": ("sh", "sh_arena"),
+                       "chicken": ("chk", "chk_arena")}[concept]
+        at.button(key=f"{prefix}_start_run").click()
         at.run()
+        while not at.session_state[key].run_complete:
+            at.button(key=f"{prefix}_btn_fast_forward").click()
+            at.run()
+    elif concept == "schelling":
+        for cat in ("numbers", "places_times", "words_categories"):
+            at.checkbox(key=f"sch_cat_{cat}").uncheck()
+        at.run()
+        at.button(key="sch_start_session").click()
+        at.run()
+        while "sch_play_again" not in [b.key for b in at.button]:
+            submit = next(b.key for b in at.button if b.key and b.key.startswith("sch_submit_"))
+            at.button(key=submit).click()
+            at.run()
+            if "sch_next_puzzle" in [b.key for b in at.button]:
+                at.button(key="sch_next_puzzle").click()
+                at.run()
+    elif concept == "ultimatum":
+        at.button(key="ult_start_session").click()
+        at.run()
+        while "ult_play_again" not in [b.key for b in at.button]:
+            keys = [b.key for b in at.button]
+            key = next(k for k in ("ult_btn_propose", "ult_btn_accept", "ult_btn_dictator_receive",
+                                   "ult_btn_next_round", "ult_btn_see_debrief") if k in keys)
+            at.button(key=key).click()
+            at.run()
+    else:
+        at.button(key="mp_start_btn").click()
+        at.run()
+        for _ in range(5):
+            at.button(key="mp_btn_Heads").click()
+            at.run()
+            at.button(key="mp_btn_next_round").click()
+            at.run()
+        at.button(key="mp_btn_finish").click()
+        at.run()
+    assert not at.exception
+    # When a click ends in st.rerun, AppTest can keep the pre-rerun copy of a sidebar widget next to the new one
+    # (a browser drops stale elements at the end of the run). One more run settles the tree.
+    at.run()
 
-    assert not any(w.proto.disabled for w in _sidebar_widgets(at)), "after the run, settings apply to the next one"
+
+@pytest.mark.parametrize("concept", [c for c, _ in STARTS])
+def test_settings_unlock_when_the_run_is_over(concept):
+    at = _open(concept)
+    _finish(at, concept)
+
+    widgets = _sidebar_widgets(at)
+    assert widgets, "the settings should still be there"
+    off = [w.key or w.label for w in widgets if w.proto.disabled]
+    assert not off, f"still locked after the run: {off}"
     assert LOCK_NOTE not in " ".join(c.value for c in at.sidebar.caption)

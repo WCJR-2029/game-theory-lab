@@ -65,4 +65,6 @@ def test_after_the_last_rung_the_menu_is_one_click_away():
     assert "menu" in back.label.lower()
     back.click()
     at.run()
+    assert not at.exception
     assert at.session_state["active_concept"] is None
+    assert "menu_play_iterated_pd" in [b.key for b in at.button], "the menu's games are on screen"

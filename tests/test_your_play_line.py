@@ -10,6 +10,7 @@ noise flip), not what the noise turned them into.
 
 from __future__ import annotations
 
+import pytest
 from streamlit.testing.v1 import AppTest
 
 from gtlab.engine import COOPERATE as C, DEFECT as D
@@ -90,15 +91,25 @@ def test_equal_scores_are_reported_too():
     assert your_play_text(state).endswith("You scored 30 against every opponent."), your_play_text(state)
 
 
-def test_the_debrief_banner_shows_the_line():
+@pytest.mark.parametrize("concept, prefix, arena_key, module", [
+    ("iterated_pd", "pd", "pd_arena", "prisoners_dilemma"),
+    ("stag_hunt", "sh", "sh_arena", "stag_hunt"),
+    ("chicken", "chk", "chk_arena", "chicken"),
+])
+def test_the_debrief_banner_shows_the_line(concept, prefix, arena_key, module):
+    import importlib
+    your_play_text = importlib.import_module(f"gtlab.concepts.{module}.view").your_play_text
+
     at = AppTest.from_file("app.py", default_timeout=30)
     at.run()
-    at.button(key="menu_play_iterated_pd").click()
+    at.button(key=f"menu_play_{concept}").click()
     at.run()
-    at.button(key="pd_start_run").click()
+    at.button(key=f"{prefix}_start_run").click()
     at.run()
-    while not at.session_state["pd_arena"].run_complete:
-        at.button(key="pd_btn_fast_forward").click()
+    while not at.session_state[arena_key].run_complete:
+        at.button(key=f"{prefix}_btn_fast_forward").click()
         at.run()
-    page = " ".join(m.value for m in at.markdown)
-    assert "You chose Cooperate in" in page and "played out for you" in page, page[:500]
+
+    line = your_play_text(at.session_state[arena_key])
+    banners = [m.value for m in at.markdown if m.value.lstrip().startswith('<div class="lab-banner')]
+    assert banners and line in banners[0], (line, banners[:1])

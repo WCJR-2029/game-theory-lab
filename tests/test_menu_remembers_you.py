@@ -29,9 +29,14 @@ def test_a_first_visit_shows_no_history():
 def test_a_returning_player_sees_what_they_played():
     progress.save_progress({"concepts": {"iterated_pd": 6, "schelling": 7, "ultimatum": 1}})
 
-    text = _menu_text()
+    at = AppTest.from_file("app.py", default_timeout=30)
+    at.run()
+    cards = {title: next(m.value for m in at.markdown if "concept-card-title" in m.value and title in m.value)
+             for title in ("Prisoner's Dilemma", "Stag Hunt", "Schelling Points", "Ultimatum & Dictator")}
 
-    assert "You've played 6 matches" in text
-    assert "You've played 7 puzzles" in text
-    assert "You've played 1 session" in text and "1 sessions" not in text
-    assert len(re.findall(r"You've played", text)) == 3, "only the games actually played"
+    assert "You've played 6 matches" in cards["Prisoner's Dilemma"]
+    assert "You've played 7 puzzles" in cards["Schelling Points"]
+    assert "You've played 1 session" in cards["Ultimatum & Dictator"]
+    assert "1 sessions" not in cards["Ultimatum & Dictator"]
+    assert "You've played" not in cards["Stag Hunt"], "a game not played shows nothing"
+    assert len(re.findall(r"You've played", _menu_text())) == 3, "only the games actually played"
