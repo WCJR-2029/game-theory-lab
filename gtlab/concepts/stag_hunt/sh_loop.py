@@ -121,6 +121,12 @@ class SHArenaState:
     # shown as a one-line "Match over" at the start of the next match.
     last_match_summary: Optional[tuple] = None
 
+    # Run-level log for the debrief's "your play" line: one entry per round (what you chose,
+    # ..., whether Play-out played it), and (opponent, you, them) per finished match.
+    round_log: list = field(default_factory=list)
+    match_log: list = field(default_factory=list)
+    auto_playing: bool = False
+
     # Opponent display names (may be "???" in mystery mode)
     opponent_display_names: list[str] = field(default_factory=list)
 
@@ -277,6 +283,7 @@ def commit_move(state: SHArenaState, player_commit: Move) -> dict:
 
     # Update histories (each sees from their own perspective — actual moves only)
     state.player_history.append((actual_player, actual_opp))
+    state.round_log.append((intended_player, player_announced == intended_player, state.auto_playing))
     state.opp_history.append((actual_opp, actual_player))
 
     # Update match scores
@@ -353,6 +360,7 @@ def _finalize_sh_match(state: SHArenaState) -> None:
         state.bot_standings[opp.name]["matches_played"] += 1
 
     state.last_match_summary = (opp.name, state.player_match_score, state.opp_match_score)
+    state.match_log.append(state.last_match_summary)
 
     state.current_opponent_idx += 1
     if state.current_opponent_idx >= len(state.bots):
@@ -410,11 +418,15 @@ def fast_forward_sh_match(state: SHArenaState) -> None:
     # Stop on the opponent change: finishing a match resets rounds_this_match, so the
     # round count alone would play out the whole run.
     start_idx = state.current_opponent_idx
-    while state.current_opponent_idx == start_idx and not state.run_complete:
-        # Phase 1: signal (non-binding; use default)
-        submit_signal(state, default_move)
-        # Phase 2: commit (actual move)
-        commit_move(state, default_move)
+    state.auto_playing = True
+    try:
+        while state.current_opponent_idx == start_idx and not state.run_complete:
+            # Phase 1: signal (non-binding; use default)
+            submit_signal(state, default_move)
+            # Phase 2: commit (actual move)
+            commit_move(state, default_move)
+    finally:
+        state.auto_playing = False
 
 
 # ---------------------------------------------------------------------------

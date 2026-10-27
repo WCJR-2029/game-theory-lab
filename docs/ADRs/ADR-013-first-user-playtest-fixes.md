@@ -37,6 +37,16 @@ were fixed under tests. The ones below changed how a game plays or looks, so the
 - **Alternatives.** Decision above the last result: rejected, the result is what the next decision reacts to. Hiding
   the note in an expander for new players: rejected, ADR-005 shows it inline until the player has some experience.
 
+### 3. The debrief says something about your own play (arena games)
+- **Problem.** Players kept saying the end of a run "never talks about how I did": beyond a rank, the paragraph covers
+  the bots, and nothing said how many rounds Play-out had played for them.
+- **Decision.** The result banner carries one line from the run itself: what you chose (Cooperate / Stag / Swerve,
+  plus announcements kept in Stag Hunt and wheels thrown in Chicken), how many rounds were played out for you, and
+  which opponent you scored most and least against. It counts choices, not what noise turned them into, and makes no
+  judgement; the "what just happened" paragraph still names the dynamic.
+- **Alternatives.** A per-round history table: rejected, too much for a first-time reader. Advice ("try defecting
+  against X"): rejected, constraint 3 (not about winning).
+
 ## Declined
 Recorded so they are not re-raised without new evidence.
 - **Resuming a run after a browser refresh.** It would mean persisting the whole arena (RNG and opponent state).

@@ -72,7 +72,7 @@ from gtlab.ui.theme import (
     transfer_expander,
 )
 from gtlab.ui.utils import ordinal, match_over_line, running_total, standings_halves, top_bot_lead
-from gtlab.ui.utils import play_out_help
+from gtlab.ui.utils import play_out_help, your_play_line
 
 # ---------------------------------------------------------------------------
 # Session-state keys (chk_-prefixed throughout)
@@ -590,6 +590,18 @@ def _make_chk_reveal_body(rows: list[dict], arena: CHKArenaState) -> str:
 # ---------------------------------------------------------------------------
 
 
+def your_play_text(arena: CHKArenaState) -> str:
+    """The debrief's line about your own run (what you chose, before any noise flip)."""
+    rounds = len(arena.round_log)
+    swerved = sum(1 for move, _, _ in arena.round_log if move == COOPERATE)
+    wheels = sum(1 for _, committed, _ in arena.round_log if committed)
+    return your_play_line(
+        f"You chose to swerve in {swerved} of {rounds} rounds and threw away the wheel "
+        f"{wheels} time{'s' if wheels != 1 else ''}",
+        arena,
+    )
+
+
 def _render_chk_debrief(arena: CHKArenaState, progress: dict) -> None:
     rows = compute_chk_standings(arena)
     your_rank = next((i + 1 for i, r in enumerate(rows) if r["is_human"]), len(rows))
@@ -606,7 +618,7 @@ def _render_chk_debrief(arena: CHKArenaState, progress: dict) -> None:
         kind = "draw"
         headline = f"Finished {ordinal(your_rank)} of {total} — {your_score} pts"
 
-    result_banner(kind, headline)
+    result_banner(kind, headline, your_play_text(arena))
 
     reveal_body = _make_chk_reveal_body(rows, arena)
     if reveal_body:

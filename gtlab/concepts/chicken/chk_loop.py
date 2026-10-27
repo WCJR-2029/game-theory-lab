@@ -126,6 +126,12 @@ class CHKArenaState:
     # shown as a one-line "Match over" at the start of the next match.
     last_match_summary: Optional[tuple] = None
 
+    # Run-level log for the debrief's "your play" line: one entry per round (what you chose,
+    # ..., whether Play-out played it), and (opponent, you, them) per finished match.
+    round_log: list = field(default_factory=list)
+    match_log: list = field(default_factory=list)
+    auto_playing: bool = False
+
     # Two-phase UI state
     commit_decided: bool = False          # True after commit phase resolves
     player_committed_this_round: bool = False
@@ -311,6 +317,7 @@ def play_round(state: CHKArenaState, player_move: Move) -> dict:
 
     # Update histories
     state.player_history.append((actual_player, actual_opp))
+    state.round_log.append((intended_player, player_committed, state.auto_playing))
     state.opp_history.append((actual_opp, actual_player))
 
     # Update scores
@@ -371,6 +378,7 @@ def _finalize_chk_match(state: CHKArenaState) -> None:
         state.bot_standings[opp.name]["matches_played"] += 1
 
     state.last_match_summary = (opp.name, state.player_match_score, state.opp_match_score)
+    state.match_log.append(state.last_match_summary)
 
     state.current_opponent_idx += 1
     if state.current_opponent_idx >= len(state.bots):
@@ -423,16 +431,20 @@ def fast_forward_chk_match(state: CHKArenaState) -> None:
     # Stop on the opponent change: finishing a match resets rounds_this_match, so the
     # round count alone would play out the whole run.
     start_idx = state.current_opponent_idx
-    while state.current_opponent_idx == start_idx and not state.run_complete:
-        # Ensure commit phase is resolved as "keep the wheel" so play_round runs
-        if not state.commit_decided:
-            state.player_committed_this_round = False
-            state.opp_committed_this_round = state.bots[state.current_opponent_idx].commit(
-                state.opp_history
-            )
-            state.commit_decided = True
+    state.auto_playing = True
+    try:
+        while state.current_opponent_idx == start_idx and not state.run_complete:
+            # Ensure commit phase is resolved as "keep the wheel" so play_round runs
+            if not state.commit_decided:
+                state.player_committed_this_round = False
+                state.opp_committed_this_round = state.bots[state.current_opponent_idx].commit(
+                    state.opp_history
+                )
+                state.commit_decided = True
 
-        play_round(state, default_move)
+            play_round(state, default_move)
+    finally:
+        state.auto_playing = False
 
 
 # ---------------------------------------------------------------------------

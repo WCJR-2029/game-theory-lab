@@ -43,7 +43,7 @@ from gtlab.ui.theme import (
     transfer_expander,
 )
 from gtlab.ui.utils import ordinal, match_over_line, running_total, standings_halves, top_bot_lead
-from gtlab.ui.utils import play_out_help
+from gtlab.ui.utils import play_out_help, your_play_line
 from gtlab.concepts.prisoners_dilemma.briefing import (
     STORY,
     HOW_IT_WORKS,
@@ -433,6 +433,13 @@ def _make_reveal_body(rows: list[dict]) -> str:
     return " ".join(sentences[:3])
 
 
+def your_play_text(arena: ArenaState) -> str:
+    """The debrief's line about your own run (what you chose, before any noise flip)."""
+    rounds = len(arena.round_log)
+    cooperated = sum(1 for move, _ in arena.round_log if move == COOPERATE)
+    return your_play_line(f"You chose Cooperate in {cooperated} of {rounds} rounds", arena)
+
+
 def _render_debrief(arena: ArenaState, progress: dict) -> None:
     rows = compute_standings(arena)
     your_rank = next((i + 1 for i, r in enumerate(rows) if r["is_human"]), len(rows))
@@ -449,7 +456,7 @@ def _render_debrief(arena: ArenaState, progress: dict) -> None:
         kind = "draw"
         headline = f"Finished {ordinal(your_rank)} of {total} — {your_score} pts"
 
-    result_banner(kind, headline)
+    result_banner(kind, headline, your_play_text(arena))
 
     reveal_body = _make_reveal_body(rows)
     if reveal_body:

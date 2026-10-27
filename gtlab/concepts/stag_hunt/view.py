@@ -65,7 +65,7 @@ from gtlab.ui.theme import (
     transfer_expander,
 )
 from gtlab.ui.utils import ordinal, match_over_line, running_total, standings_halves, top_bot_lead
-from gtlab.ui.utils import play_out_help
+from gtlab.ui.utils import play_out_help, your_play_line
 from gtlab.concepts.stag_hunt.briefing import (
     STORY, HOW_IT_WORKS, WHAT_TO_WATCH, WHY_IT_MATTERS, YOUR_JOB,
 )
@@ -575,6 +575,16 @@ def _make_sh_reveal_body(rows: list[dict]) -> str:
 # ---------------------------------------------------------------------------
 
 
+def your_play_text(arena: SHArenaState) -> str:
+    """The debrief's line about your own run (what you chose, before any noise flip)."""
+    rounds = len(arena.round_log)
+    stag = sum(1 for move, _, _ in arena.round_log if move == COOPERATE)
+    honest = sum(1 for _, kept, _ in arena.round_log if kept)
+    return your_play_line(
+        f"You chose to hunt Stag in {stag} of {rounds} rounds and did what you announced in {honest} of them", arena
+    )
+
+
 def _render_sh_debrief(arena: SHArenaState, progress: dict) -> None:
     rows = compute_sh_standings(arena)
     your_rank = next((i + 1 for i, r in enumerate(rows) if r["is_human"]), len(rows))
@@ -591,7 +601,7 @@ def _render_sh_debrief(arena: SHArenaState, progress: dict) -> None:
         kind = "draw"
         headline = f"Finished {ordinal(your_rank)} of {total} — {your_score} pts"
 
-    result_banner(kind, headline)
+    result_banner(kind, headline, your_play_text(arena))
 
     reveal_body = _make_sh_reveal_body(rows)
     if reveal_body:

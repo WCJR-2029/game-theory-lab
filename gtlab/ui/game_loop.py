@@ -179,6 +179,12 @@ class ArenaState:
     # shown as a one-line "Match over" at the start of the next match.
     last_match_summary: Optional[tuple] = None
 
+    # Run-level log for the debrief's "your play" line: one entry per round (what you chose,
+    # ..., whether Play-out played it), and (opponent, you, them) per finished match.
+    round_log: list = field(default_factory=list)
+    match_log: list = field(default_factory=list)
+    auto_playing: bool = False
+
     # --- Opponent display names (may be "???" if mystery mode)
     opponent_display_names: list[str] = field(default_factory=list)
 
@@ -291,6 +297,7 @@ def step_round(state: ArenaState, player_move: Move) -> dict:
 
     # --- Update histories (each sees from their own perspective) ---
     state.player_history.append((actual_player, actual_opp))
+    state.round_log.append((intended_player, state.auto_playing))
     state.opp_history.append((actual_opp, actual_player))
 
     # --- Update match scores ---
@@ -382,6 +389,7 @@ def _finalize_match(state: ArenaState) -> None:
         state.bot_standings[opp.name]["matches_played"] += 1
 
     state.last_match_summary = (opp.name, state.player_match_score, state.opp_match_score)
+    state.match_log.append(state.last_match_summary)
 
     # Advance to next opponent (or mark run complete)
     state.current_opponent_idx += 1
@@ -434,8 +442,12 @@ def fast_forward_match(state: ArenaState) -> None:
     # Finishing a match resets rounds_this_match and advances the opponent, so stop on the
     # opponent change; looping on the round count alone played out the whole run.
     start_idx = state.current_opponent_idx
-    while state.current_opponent_idx == start_idx and not state.run_complete:
-        step_round(state, default_move)
+    state.auto_playing = True
+    try:
+        while state.current_opponent_idx == start_idx and not state.run_complete:
+            step_round(state, default_move)
+    finally:
+        state.auto_playing = False
 
 
 # ---------------------------------------------------------------------------

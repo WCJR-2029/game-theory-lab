@@ -151,3 +151,26 @@ def top_bot_lead(rows: list[dict], name: str) -> str:
             return f"{name} tied with you at the top"
         return f"{name} finished second, behind you"
     return f"{name} finished at the top"
+
+
+def your_play_line(first: str, arena) -> str:
+    """The debrief's line about the player's own run, after its first clause (what they chose).
+
+    Adds how many rounds "Play out this match" played for them, and which opponent
+    they scored most and least against.  Built from the arena's round_log (last item
+    of each entry: played out?) and match_log ((opponent, you, them) per match).
+    """
+    played_out = sum(1 for entry in arena.round_log if entry[-1])
+    line = first
+    if played_out:
+        line += f"; {played_out} of those rounds were played out for you"
+    line += "."
+    if len(arena.match_log) > 1:
+        best = max(arena.match_log, key=lambda m: m[1])
+        worst = min(arena.match_log, key=lambda m: m[1])
+        if best[1] != worst[1]:
+            line += (
+                f" You scored most against {best[0]} (you {best[1]}, them {best[2]}) "
+                f"and least against {worst[0]} (you {worst[1]}, them {worst[2]})."
+            )
+    return line
