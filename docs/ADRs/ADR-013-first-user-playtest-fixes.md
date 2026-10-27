@@ -42,8 +42,9 @@ were fixed under tests. The ones below changed how a game plays or looks, so the
   the bots, and nothing said how many rounds Play-out had played for them.
 - **Decision.** The result banner carries one line from the run itself: what you chose (Cooperate / Stag / Swerve,
   plus announcements kept in Stag Hunt and wheels thrown in Chicken), how many rounds were played out for you, and
-  which opponent you scored most and least against. It counts choices, not what noise turned them into, and makes no
-  judgement; the "what just happened" paragraph still names the dynamic.
+  which opponent you scored most and least against. It counts choices, not what noise turned them into, and only in
+  rounds you played yourself (a played-out round repeats a move; it isn't a choice). It makes no judgement; the "what
+  just happened" paragraph still names the dynamic.
 - **Alternatives.** A per-round history table: rejected, too much for a first-time reader. Advice ("try defecting
   against X"): rejected, constraint 3 (not about winning).
 

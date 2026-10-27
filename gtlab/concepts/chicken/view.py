@@ -73,7 +73,10 @@ from gtlab.ui.theme import (
     transfer_expander,
 )
 from gtlab.ui.settings import remembered, reset_setting
-from gtlab.ui.utils import ordinal, match_over_line, running_total, standings_halves, top_bot_lead
+from gtlab.ui.utils import ordinal
+from gtlab.ui.utils import (
+    match_over_line, of_own_rounds, own_rounds, running_total, standings_halves, top_bot_lead,
+)
 from gtlab.ui.utils import play_out_help, your_play_line
 
 # ---------------------------------------------------------------------------
@@ -603,11 +606,10 @@ def _make_chk_reveal_body(rows: list[dict], arena: CHKArenaState) -> str:
 
 def your_play_text(arena: CHKArenaState) -> str:
     """The debrief's line about your own run (what you chose, before any noise flip)."""
-    rounds = len(arena.round_log)
-    swerved = sum(1 for move, _, _ in arena.round_log if move == COOPERATE)
-    wheels = sum(1 for _, committed, _ in arena.round_log if committed)
+    swerved = sum(1 for move, _, _ in own_rounds(arena) if move == COOPERATE)
+    wheels = sum(1 for _, committed, _ in own_rounds(arena) if committed)
     return your_play_line(
-        f"You chose to swerve in {swerved} of {rounds} rounds and threw away the wheel "
+        f"You chose to swerve in {of_own_rounds(swerved, arena)} and threw away the wheel "
         f"{wheels} time{'s' if wheels != 1 else ''}",
         arena,
     )

@@ -153,20 +153,35 @@ def top_bot_lead(rows: list[dict], name: str) -> str:
     return f"{name} finished at the top"
 
 
+def own_rounds(arena) -> list:
+    """The round_log entries the player played themselves, not "Play out this match" (last item of each entry)."""
+    return [entry for entry in arena.round_log if not entry[-1]]
+
+
+def of_own_rounds(count: int, arena) -> str:
+    """'7 of the 11 rounds you played yourself', or '7 of 10 rounds' when the player played every round."""
+    own, total = len(own_rounds(arena)), len(arena.round_log)
+    if own == total:
+        return f"{count} of {total} rounds"
+    return f"{count} of the {own} round{'s' if own != 1 else ''} you played yourself"
+
+
 def your_play_line(first: str, arena) -> str:
     """The debrief's line about the player's own run, after its first clause (what they chose).
 
-    Adds how many rounds "Play out this match" played for them, and which opponent
-    they scored most and least against.  Built from the arena's round_log (last item
-    of each entry: played out?) and match_log ((opponent, you, them) per match).
+    first counts the rounds the player played themselves (own_rounds / of_own_rounds): a played-out round
+    repeats a move but isn't a choice.  Adds how many rounds "Play out this match" played for them, and which
+    opponent they scored most and least against.  Built from the arena's round_log (last item of each entry:
+    played out?) and match_log ((opponent, you, them) per match).
     """
     rounds = len(arena.round_log)
     played_out = sum(1 for entry in arena.round_log if entry[-1])
-    line = first + "."
-    if played_out:
-        line += f" {played_out} of the {rounds} rounds were played out for you."
+    if played_out == rounds:
+        line = f"All {rounds} rounds were played out for you."
+    elif played_out:
+        line = f"{first}. The other {played_out} were played out for you."
     else:
-        line += " You played every round yourself."
+        line = f"{first}. You played every round yourself."
     matches = arena.match_log
     if len(matches) == 1:
         name, you, them = matches[0]

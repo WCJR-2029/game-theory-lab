@@ -44,7 +44,10 @@ from gtlab.ui.theme import (
     transfer_expander,
 )
 from gtlab.ui.settings import remembered, reset_setting
-from gtlab.ui.utils import ordinal, match_over_line, running_total, standings_halves, top_bot_lead
+from gtlab.ui.utils import ordinal
+from gtlab.ui.utils import (
+    match_over_line, of_own_rounds, own_rounds, running_total, standings_halves, top_bot_lead,
+)
 from gtlab.ui.utils import play_out_help, your_play_line
 from gtlab.concepts.prisoners_dilemma.briefing import (
     STORY,
@@ -445,9 +448,8 @@ def _make_reveal_body(rows: list[dict]) -> str:
 
 def your_play_text(arena: ArenaState) -> str:
     """The debrief's line about your own run (what you chose, before any noise flip)."""
-    rounds = len(arena.round_log)
-    cooperated = sum(1 for move, _ in arena.round_log if move == COOPERATE)
-    return your_play_line(f"You chose Cooperate in {cooperated} of {rounds} rounds", arena)
+    cooperated = sum(1 for move, _ in own_rounds(arena) if move == COOPERATE)
+    return your_play_line(f"You chose Cooperate in {of_own_rounds(cooperated, arena)}", arena)
 
 
 def debrief_tips(arena: ArenaState) -> tuple[str, str]:

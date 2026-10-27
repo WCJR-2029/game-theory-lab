@@ -6,6 +6,9 @@ beyond a rank: its paragraph covers the bots only, and nothing said that many of
 them. The result banner now carries one line built from the run itself: what you chose, how many rounds "Play out
 this match" played for you, and which opponent you scored most and least against. It counts your choices (before any
 noise flip), not what the noise turned them into.
+
+A later round: a player who let Play-out finish 49 of 60 rounds read "You chose Cooperate in 38 of 60 rounds" and
+said the line didn't describe what they did. What you "chose" now counts only the rounds you played yourself.
 """
 
 from __future__ import annotations
@@ -31,7 +34,8 @@ def test_prisoners_dilemma_line():
 
     text = your_play_text(state)
 
-    assert text.startswith("You chose Cooperate in 10 of 20 rounds. 9 of the 20 rounds were played out for you."), text
+    assert text.startswith("You chose Cooperate in 10 of the 11 rounds you played yourself. "
+                           "The other 9 were played out for you."), text
     assert "You scored most against Tit for Tat (you 30, them 30) and least against Always Defect (you 10, them 10)." in text, text
 
 
@@ -49,8 +53,8 @@ def test_stag_hunt_line_counts_what_you_announced():
     text = your_play_text(state)
 
     assert text == (
-        "You chose to hunt Stag in 9 of 10 rounds and kept your announcement in 9 of 10. "
-        "8 of the 10 rounds were played out for you. Against Trusting: you 39, them 36."), text
+        "You chose to hunt Stag in 1 of the 2 rounds you played yourself and kept your announcement in 1 of them. "
+        "The other 8 were played out for you. Against Trusting: you 39, them 36."), text
 
 
 def test_chicken_line_counts_thrown_wheels():
@@ -66,8 +70,8 @@ def test_chicken_line_counts_thrown_wheels():
     text = your_play_text(state)
 
     assert text.startswith(
-        "You chose to swerve in 10 of 20 rounds and threw away the wheel 1 time. "
-        "19 of the 20 rounds were played out for you."), text
+        "You chose to swerve in 0 of the 1 round you played yourself and threw away the wheel 1 time. "
+        "The other 19 were played out for you."), text
     assert "scored most against Dove" in text and "least against Hawk" in text, text
 
 
@@ -89,6 +93,16 @@ def test_equal_scores_are_reported_too():
     while not state.run_complete:
         game_loop.step_round(state, C)
     assert your_play_text(state).endswith("You scored 30 against every opponent."), your_play_text(state)
+
+
+def test_a_run_played_out_entirely_says_so():
+    from gtlab.concepts.prisoners_dilemma.view import your_play_text
+
+    state = game_loop.init_arena(["Tit for Tat"], noise=0.0, mystery_mode=False)
+    game_loop.fast_forward_match(state)
+    assert state.run_complete
+    assert your_play_text(state).startswith("All 10 rounds were played out for you. Against Tit for Tat"), \
+        your_play_text(state)
 
 
 @pytest.mark.parametrize("concept, prefix, arena_key, module", [
