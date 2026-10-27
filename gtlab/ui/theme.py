@@ -790,6 +790,7 @@ def intro_above_fold(
     briefing_content_fn: object = None,
     start_disabled: bool = False,
     disabled_reason: str = "",
+    start_note: str = "",
 ) -> bool:
     """Render the intro screen with Start above the fold.
 
@@ -854,6 +855,8 @@ def intro_above_fold(
         )
         if start_disabled and disabled_reason:
             st.caption(disabled_reason)
+        elif start_note:
+            st.caption(start_note)
 
     # Briefing expander (collapsed)
     if briefing_content_fn is not None:
@@ -872,6 +875,16 @@ def _played_line(concept: dict, counts: dict) -> str:
     return (
         f'\n  <div style="font-size:0.78rem;color:{_ACCENT};margin-top:0.45rem;">'
         f"You've played {n} {singular if n == 1 else plural}</div>"
+    )
+
+
+def _next_up_line(concept: dict, next_up: str | None) -> str:
+    """The "Next up" marker for the first game not yet played (shown once something has been played)."""
+    if concept["key"] != next_up:
+        return ""
+    return (
+        f'\n  <div style="font-size:0.72rem;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;'
+        f'color:{_ACCENT};margin-top:0.45rem;">Next up</div>'
     )
 
 
@@ -896,6 +909,9 @@ def progression_menu(concepts: list[dict], callbacks: dict, progress: dict | Non
                you have played that game, so a returning player can see they've been here.
     """
     counts = (progress or {}).get("concepts", {})
+    # Once something has been played, the first game not yet played is "Next up".
+    unplayed = [c["key"] for c in concepts if c["available"] and not counts.get(c["key"], 0)]
+    next_up = unplayed[0] if counts and unplayed else None
     # Framing line above the grid
     st.markdown(
         '<div style="font-size:0.95rem;color:#8B9299;margin-bottom:1.1rem;">'
@@ -927,7 +943,7 @@ def progression_menu(concepts: list[dict], callbacks: dict, progress: dict | Non
               margin-bottom:0.5rem;font-style:italic;">
     {progression_text}
   </div>
-  <div class="concept-card-tagline">{concept["tagline"]}</div>{_played_line(concept, counts)}
+  <div class="concept-card-tagline">{concept["tagline"]}</div>{_played_line(concept, counts)}{_next_up_line(concept, next_up)}
 </div>
 """,
                     unsafe_allow_html=True,

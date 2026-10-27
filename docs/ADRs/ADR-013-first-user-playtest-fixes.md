@@ -67,7 +67,21 @@ were fixed under tests. The ones below changed how a game plays or looks, so the
 - **Decision.** Each menu card shows "You've played N <matches / puzzles / sessions>" from the anonymous per-game
   counts ADR-005 already keeps; a game not yet played shows nothing. No new data is stored.
 
+### 7. Say what Play-out plays, how long a run is, and what's next
+- **Problem.** In a later round four of five players still couldn't tell what "Play out this match" would play (the
+  move was only in the tooltip), three didn't know before Start that a run is 6 opponents x 10 rounds, and a returning
+  player found no "where to pick up".
+- **Decision.** The line beside Play-out names the move ("playing Cooperate each round"). The setup screen says how
+  long the run is and that Play-out can finish any match. Once something has been played, the menu marks the first
+  game not yet played "Next up". Stag Hunt's and Chicken's second step no longer repeat the first step's prompt, so
+  their buttons sit higher.
+
 ## Declined
 Recorded so they are not re-raised without new evidence.
 - **Resuming a run after a browser refresh.** It would mean persisting the whole arena (RNG and opponent state).
   ADR-005 deliberately stores only anonymous per-game counts. A refresh starting over is acceptable for a sandbox.
+- **Remembering past results or rosters on the menu.** Same reason: the progress file holds anonymous counts only.
+- **A shorter default roster.** The full field is what the arena's standings teach (who did well depends on who was
+  there); with the run length stated up front, Play-out, and Select all / Clear, the player sets the length.
+- **Thousands separators on Ultimatum's offer slider.** Streamlit's slider format can't add them; the figures under
+  the slider show them.

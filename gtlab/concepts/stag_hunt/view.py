@@ -361,7 +361,6 @@ def _render_commit_phase(arena: SHArenaState, display_name: str) -> dict | None:
     with col_o:
         st.markdown(f"**{display_name} announced:** :{o_color}[{o_label}]")
 
-    st.divider()
     st.write("**Step 2 — Now actually hunt:**")
     st.caption("You've seen their announcement. What do you actually do?")
 
@@ -451,7 +450,8 @@ def _render_current_match_panel(arena: SHArenaState, progress: dict) -> None:
     if rounds_done > 0:
         _render_last_round_result(arena, display_name)
     else:
-        st.caption("Your first round against this opponent. Make your announcement.")
+        if not arena.signal_submitted:
+            st.caption("Your first round against this opponent. Make your announcement.")
 
     st.divider()
 
@@ -490,7 +490,7 @@ def _render_current_match_panel(arena: SHArenaState, progress: dict) -> None:
                 progress = st.session_state.progress = record_play(SH_CONCEPT_KEY)
                 st.rerun()
         with col_note:
-            st.caption("Finishes this match for you.")
+            st.caption(f"Finishes this match for you, playing {_move_label(fast_forward_sh_move(arena))} each round.")
 
     # The teaching note comes after the decision, so the next step stays near the top of the screen.
     _render_sh_nudge(arena.last_nudge_event, progress)
@@ -720,6 +720,10 @@ def render() -> None:
             briefing_content_fn=_briefing_content,
             start_disabled=not selected_names,
             disabled_reason="Pick at least one opponent in the sidebar to start.",
+            start_note=(
+                f"This run: {len(selected_names)} opponent{'s' if len(selected_names) != 1 else ''} × "
+                f"{SH_MATCH_LENGTH} rounds. \"Play out this match\" can finish any match for you."
+            ),
         )
 
         if started:

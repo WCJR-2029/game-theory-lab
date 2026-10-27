@@ -464,7 +464,8 @@ def _render_current_match_panel(arena: CHKArenaState, progress: dict) -> None:
     if rounds_done > 0:
         _render_last_round_result(arena, display_name)
     else:
-        st.caption("Your first round against this opponent. Commit or keep the wheel?")
+        if not arena.commit_decided:
+            st.caption("Your first round against this opponent. Commit or keep the wheel?")
 
     st.divider()
 
@@ -514,7 +515,10 @@ def _render_current_match_panel(arena: CHKArenaState, progress: dict) -> None:
                 progress = st.session_state.progress = record_play(CHK_CONCEPT_KEY)
                 st.rerun()
         with col_note:
-            st.caption("Finishes this match for you.")
+            st.caption(
+                "Finishes this match for you, keeping the wheel and playing "
+                f"{_move_label(fast_forward_chk_move(arena))} each round."
+            )
 
     # The teaching note comes after the decision, so the next step stays near the top of the screen.
     _render_chk_nudge(arena.last_nudge_event, progress)
@@ -733,6 +737,10 @@ def render() -> None:
             briefing_content_fn=_briefing_content,
             start_disabled=not selected_names,
             disabled_reason="Pick at least one opponent in the sidebar to start.",
+            start_note=(
+                f"This run: {len(selected_names)} opponent{'s' if len(selected_names) != 1 else ''} × "
+                f"{CHK_MATCH_LENGTH} rounds. \"Play out this match\" can finish any match for you."
+            ),
         )
 
         if started:

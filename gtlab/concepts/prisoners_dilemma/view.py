@@ -367,7 +367,8 @@ def _render_current_match_panel(arena: ArenaState, progress: dict) -> None:
                 progress = st.session_state.progress = record_play(CONCEPT_KEY)
                 st.rerun()
         with col_note:
-            st.caption("Finishes this match for you.")
+            move = "Cooperate" if fast_forward_move(arena) == COOPERATE else "Defect"
+            st.caption(f"Finishes this match for you, playing {move} each round.")
 
     # The teaching note comes after the decision, so the next move stays near the top of the screen.
     _render_nudge(arena.last_nudge_event, progress)
@@ -577,6 +578,10 @@ def render() -> None:
             briefing_content_fn=_briefing_content,
             start_disabled=not selected_names,
             disabled_reason="Pick at least one opponent in the sidebar to start.",
+            start_note=(
+                f"This run: {len(selected_names)} opponent{'s' if len(selected_names) != 1 else ''} × "
+                f"{MATCH_LENGTH} rounds. \"Play out this match\" can finish any match for you."
+            ),
         )
 
         if started:
