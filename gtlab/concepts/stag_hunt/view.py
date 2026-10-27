@@ -240,7 +240,7 @@ def _render_sh_sidebar(locked: bool = False) -> tuple[list[str], float, bool]:
         select_all = st.button("Select all", key="sh_roster_all", width="stretch", disabled=locked)
     with col_clear:
         clear = st.button("Clear", key="sh_roster_clear", width="stretch", disabled=locked)
-    if select_all or clear:
+    if (select_all or clear) and not locked:  # a click can still arrive on the disabled buttons
         for name in all_names:
             reset_setting(f"sh_roster_{name}", select_all)
     selected_names = []

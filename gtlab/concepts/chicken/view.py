@@ -229,7 +229,7 @@ def _render_chk_sidebar(locked: bool = False) -> tuple[list[str], float, bool, i
         select_all = st.button("Select all", key="chk_roster_all", width="stretch", disabled=locked)
     with col_clear:
         clear = st.button("Clear", key="chk_roster_clear", width="stretch", disabled=locked)
-    if select_all or clear:
+    if (select_all or clear) and not locked:  # a click can still arrive on the disabled buttons
         for name in all_names:
             reset_setting(f"chk_roster_{name}", select_all)
     selected_names = []

@@ -18,16 +18,16 @@ def _session_until(kind: str) -> AppTest:
     at.run()
     at.button(key="menu_play_schelling").click()
     at.run()
-    keep = "numbers" if kind == "int" else "splitting"
+    keep = {"int": "numbers", "split": "splitting", "option": "words_categories"}[kind]
     for cat in ("numbers", "places_times", "words_categories", "splitting"):
         if cat != keep:
             at.checkbox(key=f"sch_cat_{cat}").uncheck()
     at.run()
     at.button(key="sch_start_session").click()
     at.run()
-    prefix = "sch_input_int_" if kind == "int" else "sch_split_mine_"
+    prefix = {"int": "sch_input_int_", "split": "sch_split_mine_", "option": "sch_input_opt_"}[kind]
     for _ in range(12):
-        if any(n.key and n.key.startswith(prefix) for n in at.number_input):
+        if any(w.key and w.key.startswith(prefix) for w in [*at.number_input, *at.radio]):
             return at
         # not this kind of puzzle: answer it and move on
         submit = next(b.key for b in at.button if b.key and b.key.startswith("sch_submit_"))
