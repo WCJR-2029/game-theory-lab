@@ -195,14 +195,15 @@ def init_arena(
     mystery_mode: bool,
 ) -> ArenaState:
     """Build a fresh ArenaState for the start of a new run."""
-    if not selected_bot_names:
-        raise ValueError("Pick at least one opponent: the roster is empty.")
     state = ArenaState(
         selected_bot_names=selected_bot_names,
         noise=noise,
         mystery_mode=mystery_mode,
     )
     state.bots = build_fresh_roster(selected_bot_names)
+    # Unknown names are dropped when the roster is built, so check the result, not the names.
+    if not state.bots:
+        raise ValueError("Pick at least one opponent: the roster is empty.")
     state.human = HumanStrategy()
     state.rng = random.Random()
 

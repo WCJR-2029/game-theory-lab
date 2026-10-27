@@ -79,3 +79,10 @@ def test_roster_clear_and_select_all(concept, prefix):
 def test_a_loop_refuses_an_empty_roster(init):
     with pytest.raises(ValueError, match="at least one opponent"):
         init([], 0.0, False)
+
+
+@pytest.mark.parametrize("init", [game_loop.init_arena, sh_loop.init_sh_arena, chk_loop.init_chk_arena])
+def test_a_loop_refuses_a_roster_with_no_known_opponent(init):
+    """Unknown names are dropped when the roster is built, so the check has to look at the result."""
+    with pytest.raises(ValueError, match="at least one opponent"):
+        init(["not-a-strategy"], 0.0, False)

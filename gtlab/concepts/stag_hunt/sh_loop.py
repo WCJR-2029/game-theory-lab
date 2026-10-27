@@ -164,14 +164,15 @@ def init_sh_arena(
     mystery_mode: bool,
 ) -> SHArenaState:
     """Build a fresh SHArenaState for the start of a new run."""
-    if not selected_bot_names:
-        raise ValueError("Pick at least one opponent: the roster is empty.")
     state = SHArenaState(
         selected_bot_names=selected_bot_names,
         noise=noise,
         mystery_mode=mystery_mode,
     )
     state.bots = build_sh_roster(selected_bot_names)
+    # Unknown names are dropped when the roster is built, so check the result, not the names.
+    if not state.bots:
+        raise ValueError("Pick at least one opponent: the roster is empty.")
     state.rng = random.Random()
 
     state.bot_standings = {
