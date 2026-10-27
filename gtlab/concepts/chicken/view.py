@@ -447,7 +447,6 @@ def _render_current_match_panel(arena: CHKArenaState, progress: dict) -> None:
 
     if rounds_done > 0:
         _render_last_round_result(arena, display_name)
-        _render_chk_nudge(arena.last_nudge_event, progress)
     else:
         st.caption("Your first round against this opponent. Commit or keep the wheel?")
 
@@ -486,7 +485,7 @@ def _render_current_match_panel(arena: CHKArenaState, progress: dict) -> None:
     # The button is outside the commit/choose branching so it persists.
     if not arena.commit_decided and rounds_left > 1:
         st.markdown("<div style='height:0.4rem'></div>", unsafe_allow_html=True)
-        col_ff, _ = st.columns([1, 3])
+        col_ff, col_note = st.columns([1, 3])
         with col_ff:
             if st.button(
                 "Play out this match",
@@ -504,7 +503,11 @@ def _render_current_match_panel(arena: CHKArenaState, progress: dict) -> None:
                 save_progress(prog)
                 st.session_state.progress = prog
                 st.rerun()
+        with col_note:
+            st.caption("Finishes this match for you.")
 
+    # The teaching note comes after the decision, so the next step stays near the top of the screen.
+    _render_chk_nudge(arena.last_nudge_event, progress)
     _render_chk_on_demand_nudge(arena.last_nudge_event, progress)
 
 

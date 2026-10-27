@@ -26,6 +26,17 @@ were fixed under tests. The ones below changed how a game plays or looks, so the
   only as the one deciding. Keep receiver-only Dictator rounds and add a separate Dictator mode. Rejected as more
   surface for the same lesson.
 
+### 2. The next decision before the teaching note (arena games)
+- **Problem.** After each round the screen showed the last result, then the teaching note (a tall card), then the move
+  buttons and "Play out this match". Players had to scroll on most rounds to find the next decision; in Stag Hunt the
+  Hunt buttons sat off-screen after announcing. "Play out this match" was found only by scrolling and said nothing
+  about what it does until hovered.
+- **Decision.** Order in the Prisoner's Dilemma, Stag Hunt and Chicken: the last result (one banner), the decision
+  with "Play out this match" and a one-line "Finishes this match for you." beside it, then the teaching note. The
+  Stag Hunt and Chicken first-round setup notes, set for new players but never shown, now show too.
+- **Alternatives.** Decision above the last result: rejected, the result is what the next decision reacts to. Hiding
+  the note in an expander for new players: rejected, ADR-005 shows it inline until the player has some experience.
+
 ## Declined
 Recorded so they are not re-raised without new evidence.
 - **Resuming a run after a browser refresh.** It would mean persisting the whole arena (RNG and opponent state).
