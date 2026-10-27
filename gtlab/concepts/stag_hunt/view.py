@@ -595,6 +595,23 @@ def your_play_text(arena: SHArenaState) -> str:
     )
 
 
+def debrief_tips(arena: SHArenaState) -> tuple[str, str]:
+    """(tip for a new player, tip once they have some experience). Only suggests what this run didn't already do."""
+    tries = []
+    if arena.noise == 0:
+        tries.append("Try turning on noise and notice how trust falls apart differently.")
+    if "Bluffer" not in arena.selected_bot_names:
+        tries.append("Add the Bluffer to the roster and watch what happens to announcements.")
+    if not tries:
+        tries.append("Try a smaller roster and watch one opponent's announcements closely.")
+    more = (
+        "What happens when you turn on Mystery opponents and try to read the announcements?"
+        if not arena.mystery_mode else
+        "What happens when you can see who you're playing again?"
+    )
+    return " ".join(tries) + " The same payoffs; very different dynamics.", more
+
+
 def _render_sh_debrief(arena: SHArenaState, progress: dict) -> None:
     rows = compute_sh_standings(arena)
     your_rank = next((i + 1 for i, r in enumerate(rows) if r["is_human"]), len(rows))
@@ -624,14 +641,11 @@ def _render_sh_debrief(arena: SHArenaState, progress: dict) -> None:
         result_banner(
             "neutral",
             "Notice anything?",
-            "Try turning on noise and notice how trust falls apart differently. "
-            "Or add the Bluffer to the roster and watch what happens to announcements. "
-            "The same payoffs; very different dynamics.",
+            debrief_tips(arena)[0],
         )
     elif nudge_state == NudgeState.PROGRESSING:
         st.caption(
-            f"({exp} match{'es' if exp != 1 else ''} completed. "
-            "What happens when you turn on Mystery opponents and try to read the announcements?)"
+            f"({exp} match{'es' if exp != 1 else ''} completed. {debrief_tips(arena)[1]})"
         )
 
     # E4: chart-only leaderboard on debrief (no redundant table)

@@ -613,6 +613,24 @@ def your_play_text(arena: CHKArenaState) -> str:
     )
 
 
+def debrief_tips(arena: CHKArenaState) -> tuple[str, str]:
+    """(tip for a new player, tip once they have some experience). Only suggests what this run didn't already do."""
+    tries = []
+    if "Committer" not in arena.selected_bot_names:
+        tries.append("Try the Committer — watch what happens to your choices when the opponent "
+                     "always throws away the wheel first.")
+    if arena.game.payoff_11 > -50:
+        tries.append("Crank up the crash severity and notice how your own nerve shifts.")
+    if not tries:
+        tries.append("Try a gentler crash severity and notice whether Straight starts to tempt you.")
+    more = (
+        "What changes when you turn on noise? A committed Straight stays Straight — but an uncommitted one might flip."
+        if arena.noise == 0 else
+        "What changes with noise off? Every move then does exactly what was chosen."
+    )
+    return " ".join(tries), more
+
+
 def _render_chk_debrief(arena: CHKArenaState, progress: dict) -> None:
     rows = compute_chk_standings(arena)
     your_rank = next((i + 1 for i, r in enumerate(rows) if r["is_human"]), len(rows))
@@ -648,15 +666,11 @@ def _render_chk_debrief(arena: CHKArenaState, progress: dict) -> None:
         result_banner(
             "neutral",
             "Notice anything?",
-            "Try the Committer — watch what happens to your choices when the opponent "
-            "always throws away the wheel first. "
-            "Or crank up the crash severity and notice how your own nerve shifts.",
+            debrief_tips(arena)[0],
         )
     elif nudge_state == NudgeState.PROGRESSING:
         st.caption(
-            f"({exp} match{'es' if exp != 1 else ''} completed. "
-            "What changes when you turn on noise? A committed Straight stays Straight "
-            "— but an uncommitted one might flip.)"
+            f"({exp} match{'es' if exp != 1 else ''} completed. {debrief_tips(arena)[1]})"
         )
 
     # E4: chart-only leaderboard on debrief (no redundant table)

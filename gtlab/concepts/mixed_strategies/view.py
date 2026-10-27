@@ -603,6 +603,18 @@ def _make_reveal_body(arena: MSArenaState) -> str:
     return " ".join(sentences[:3])
 
 
+def debrief_tips(arena: MSArenaState) -> tuple[str, str]:
+    """(tip for a new player, tip once they have some experience). Only suggests what this run didn't already do."""
+    if arena.rotating:
+        new = "Try one opponent at a time and deliberately vary your moves."
+    elif isinstance(arena.opponent, PerfectRandomizer):
+        new = "Try the Pattern Reader next and notice how quickly it starts reading you."
+    else:
+        new = ("Try the same opponent again and deliberately vary your moves. "
+               "Then try the Perfect Randomizer and notice what that feels like.")
+    return new, "Try switching opponents or games and see how the readout changes."
+
+
 def _render_session_complete(arena: MSArenaState, progress: dict) -> None:
     """Render the end-of-session debrief."""
     app_header(
@@ -644,13 +656,11 @@ def _render_session_complete(arena: MSArenaState, progress: dict) -> None:
         result_banner(
             "neutral",
             "Notice anything?",
-            "Try the same opponent again and deliberately vary your moves. "
-            "Then try the Perfect Randomizer and notice what that feels like.",
+            debrief_tips(arena)[0],
         )
     elif nudge_state == NudgeState.PROGRESSING:
         st.caption(
-            f"({exp} session{'s' if exp != 1 else ''} completed. "
-            "Try switching opponents or games and see how the readout changes.)"
+            f"({exp} session{'s' if exp != 1 else ''} completed. {debrief_tips(arena)[1]})"
         )
 
     st.divider()

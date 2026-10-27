@@ -677,6 +677,23 @@ def _make_reveal_body(arena: ULTArenaState) -> str:
 # ---------------------------------------------------------------------------
 
 
+def debrief_tips(arena: ULTArenaState) -> tuple[str, str]:
+    """(tip for a new player, tip once they have some experience). Only suggests what this run didn't already do."""
+    tries = []
+    if arena.prize < max(ULT_STAKE_OPTIONS.values()):
+        tries.append("Try raising the stake size and notice how your tolerance for unfairness shifts.")
+    if not arena.mystery_mode:
+        tries.append("Turn on Mystery opponents and see if you can read their style before they're revealed.")
+    if not tries:
+        tries.append("Try a small stake and notice whether a stingy offer stings more.")
+    more = (
+        "Try turning off reputation and compare how opponents behave — cold openers vs. opponents who've seen you play."
+        if arena.reputation_on else
+        "Try turning reputation back on and notice how opponents adjust to the way you've treated them."
+    )
+    return " ".join(tries), more
+
+
 def _render_debrief(arena: ULTArenaState, progress: dict) -> None:
     """Show post-session summary."""
     result_banner(
@@ -696,14 +713,11 @@ def _render_debrief(arena: ULTArenaState, progress: dict) -> None:
         result_banner(
             "neutral",
             "Notice anything?",
-            "Try raising the stake size and notice how your tolerance for unfairness shifts. "
-            "Or turn on Mystery opponents and see if you can read their style before they're revealed.",
+            debrief_tips(arena)[0],
         )
     elif nudge_state == NudgeState.PROGRESSING:
         st.caption(
-            f"({exp} session{'s' if exp != 1 else ''} completed. "
-            "Try turning off reputation and compare how opponents behave — "
-            "cold openers vs. opponents who've seen you play.)"
+            f"({exp} session{'s' if exp != 1 else ''} completed. {debrief_tips(arena)[1]})"
         )
 
     st.divider()

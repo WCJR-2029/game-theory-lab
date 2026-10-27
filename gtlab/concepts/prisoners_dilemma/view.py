@@ -450,6 +450,16 @@ def your_play_text(arena: ArenaState) -> str:
     return your_play_line(f"You chose Cooperate in {cooperated} of {rounds} rounds", arena)
 
 
+def debrief_tips(arena: ArenaState) -> tuple[str, str]:
+    """(tip for a new player, tip once they have some experience). Only suggests what this run didn't already do."""
+    noise = "turning on noise" if arena.noise == 0 else "changing the noise level"
+    return (
+        f"Try changing the roster or {noise} - different combinations produce very different outcomes. "
+        "There's no single 'best' move; what works depends on who you're playing.",
+        "Try adjusting the noise dial and see what changes.",
+    )
+
+
 def _render_debrief(arena: ArenaState, progress: dict) -> None:
     rows = compute_standings(arena)
     your_rank = next((i + 1 for i, r in enumerate(rows) if r["is_human"]), len(rows))
@@ -479,14 +489,11 @@ def _render_debrief(arena: ArenaState, progress: dict) -> None:
         result_banner(
             "neutral",
             "Notice anything?",
-            "Try changing the roster or turning on noise - different combinations "
-            "produce very different outcomes. There's no single 'best' move; what "
-            "works depends on who you're playing.",
+            debrief_tips(arena)[0],
         )
     elif nudge_state == NudgeState.PROGRESSING:
         st.caption(
-            f"({exp} match{'es' if exp != 1 else ''} completed. "
-            "Try adjusting the noise dial and see what changes.)"
+            f"({exp} match{'es' if exp != 1 else ''} completed. {debrief_tips(arena)[1]})"
         )
 
     # E4: chart-only leaderboard on debrief (no redundant table)

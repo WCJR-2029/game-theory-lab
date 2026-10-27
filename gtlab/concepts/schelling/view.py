@@ -370,6 +370,21 @@ def _make_reveal_body(session: SCHSession) -> str:
 # ---------------------------------------------------------------------------
 
 
+def debrief_tips(session: SCHSession) -> tuple[str, str]:
+    """(tip for a new player, tip once they have some experience). Only suggests what this run didn't already do."""
+    if not session.hard_mode:
+        return (
+            "Try hard mode in the sidebar to see focal-vs-logic puzzles - where the clever answer draws fewer "
+            "matches than the obvious one. Or change the categories to explore different coordination scenarios.",
+            "Hard mode adds puzzles where salience beats logic - the most counterintuitive coordination moments.",
+        )
+    return (
+        "Change the categories to explore different coordination scenarios, or play again and see whether "
+        "the obvious answer keeps winning out.",
+        "Try a different mix of categories and see which kinds of puzzle you match on most.",
+    )
+
+
 def _render_session_complete(session: SCHSession, progress: dict) -> None:
     pct = (
         session.matches_won / session.rounds_played * 100
@@ -415,15 +430,11 @@ def _render_session_complete(session: SCHSession, progress: dict) -> None:
         result_banner(
             "neutral",
             "Want more?",
-            "Try hard mode in the sidebar to see focal-vs-logic puzzles - "
-            "where the clever answer loses to the obvious one. "
-            "Or change the categories to explore different coordination scenarios.",
+            debrief_tips(session)[0],
         )
     elif nudge_state == NudgeState.PROGRESSING:
         st.caption(
-            f"({exp} puzzle{'s' if exp != 1 else ''} completed. "
-            "Hard mode adds puzzles where salience beats logic - "
-            "the most counterintuitive coordination moments.)"
+            f"({exp} puzzle{'s' if exp != 1 else ''} completed. {debrief_tips(session)[1]})"
         )
 
     st.divider()
