@@ -127,3 +127,18 @@ def _snapshot(state):
         list(state.player_history), list(state.opp_history), copy.deepcopy(state.bot_standings),
         state.last_match_summary, state.run_complete,
     )
+
+
+def test_chicken_play_out_after_a_thrown_wheel_plays_that_round_as_decided():
+    """If the player has already thrown the wheel this round (the app hides Play-out then), that round is played as
+    decided; every round after it keeps the wheel and plays the selected move."""
+    from gtlab.concepts.chicken.chk_loop import fast_forward_chk_move
+    state = GAMES["chicken"]["init"]()
+    decide_commit(state, True)
+    selected = fast_forward_chk_move(state)
+
+    fast_forward_chk_match(state)
+
+    first, rest = state.round_log[0], state.round_log[1:]
+    assert first[1] is True, "the thrown wheel stands for that round"
+    assert rest and all(entry[0] == selected and entry[1] is False for entry in rest)

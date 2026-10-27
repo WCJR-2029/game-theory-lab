@@ -911,7 +911,7 @@ def progression_menu(concepts: list[dict], callbacks: dict, progress: dict | Non
     counts = (progress or {}).get("concepts", {})
     # Once something has been played, the first game not yet played is "Next up".
     unplayed = [c["key"] for c in concepts if c["available"] and not counts.get(c["key"], 0)]
-    next_up = unplayed[0] if counts and unplayed else None
+    next_up = unplayed[0] if any(counts.values()) and unplayed else None
     # Framing line above the grid
     st.markdown(
         '<div style="font-size:0.95rem;color:#8B9299;margin-bottom:1.1rem;">'

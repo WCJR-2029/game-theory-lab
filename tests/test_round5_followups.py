@@ -44,13 +44,48 @@ def test_the_line_beside_play_out_names_the_move(concept, prefix, expected):
     assert expected in _captions(at), _captions(at)
 
 
-def test_the_named_move_follows_your_last_choice():
-    at = _open("iterated_pd")
-    at.button(key="pd_start_run").click()
-    at.run()
+def _pd_defect(at):
     at.button(key="pd_btn_defect").click()
     at.run()
-    assert "Finishes this match for you, playing Defect each round." in _captions(at)
+
+
+def _sh_hare(at):
+    at.button(key="sh_btn_announce_hare").click()
+    at.run()
+    at.button(key="sh_btn_commit_hare").click()
+    at.run()
+
+
+def _chk_straight(at):
+    at.button(key="chk_btn_keep_wheel").click()
+    at.run()
+    at.button(key="chk_btn_straight").click()
+    at.run()
+
+
+@pytest.mark.parametrize("concept, prefix, arena_key, play, label", [
+    ("iterated_pd", "pd", "pd_arena", _pd_defect, "Defect"),
+    ("stag_hunt", "sh", "sh_arena", _sh_hare, "Hare"),
+    ("chicken", "chk", "chk_arena", _chk_straight, "Straight"),
+])
+def test_the_named_move_is_the_move_play_out_plays(concept, prefix, arena_key, play, label):
+    from gtlab.engine import DEFECT
+
+    at = _open(concept)
+    at.button(key=f"{prefix}_start_run").click()
+    at.run()
+    play(at)
+    assert f"playing {label} each round." in _captions(at), _captions(at)
+
+    before = len(at.session_state[arena_key].round_log)
+    at.button(key=f"{prefix}_btn_fast_forward").click()
+    at.run()
+    played = at.session_state[arena_key].round_log[before:]
+
+    assert len(played) == 9, "the nine rounds left in the match"
+    assert all(entry[0] == DEFECT and entry[-1] for entry in played), "every played-out round is the named move"
+    if concept == "chicken":
+        assert not any(entry[1] for entry in played), "and keeps the wheel"
 
 
 @pytest.mark.parametrize("concept, prefix, opponents", [
@@ -68,6 +103,17 @@ def test_the_setup_screen_says_how_long_the_run_is(concept, prefix, opponents):
     at.run()
     assert "This run: 1 opponent × 10 rounds" in _captions(at), _captions(at)
 
+    at.checkbox(key=names[0]).uncheck()
+    at.run()
+    assert "This run:" not in _captions(at) and "Pick at least one opponent" in _captions(at)
+
+    at.checkbox(key=names[0]).check()
+    at.run()
+    at.button(key=f"{prefix}_start_run").click()
+    at.run()
+    arena = at.session_state[{"pd": "pd_arena", "sh": "sh_arena", "chk": "chk_arena"}[prefix]]
+    assert len(arena.bots) == 1, "the run started is the run the note described"
+
 
 @pytest.mark.parametrize("concept, prefix, step_one, stale", [
     ("stag_hunt", "sh", "sh_btn_announce_stag", "Make your announcement"),
@@ -80,24 +126,39 @@ def test_step_two_does_not_repeat_the_step_one_prompt(concept, prefix, step_one,
     assert stale in _captions(at), "precondition: step 1 shows the prompt"
     at.button(key=step_one).click()
     at.run()
+    assert not at.exception
+    keys = [b.key for b in at.button]
+    step_two = {"sh": {"sh_btn_commit_stag", "sh_btn_commit_hare"}, "chk": {"chk_btn_swerve", "chk_btn_straight"}}[prefix]
+    assert step_two <= set(keys) and step_one not in keys, keys
     assert stale not in _captions(at), _captions(at)
 
 
 def _cards():
     at = AppTest.from_file("app.py", default_timeout=30)
     at.run()
-    return {m.value.split('concept-card-title">')[1].split("<")[0]: m.value
-            for m in at.markdown if 'concept-card-title">' in m.value}
+    cards = {m.value.split('concept-card-title">')[1].split("<")[0]: m.value
+             for m in at.markdown if 'concept-card-title">' in m.value}
+    assert len(cards) == 6, cards.keys()
+    return cards
 
 
-def test_the_menu_points_to_the_next_unplayed_game():
-    assert not any("Next up" in card for card in _cards().values()), "a first visit has no 'next up'"
+def _next_up(counts):
+    progress.save_progress({"concepts": counts})
+    marked = [title for title, card in _cards().items() if "Next up" in card]
+    assert len(marked) <= 1, marked
+    return marked[0] if marked else None
 
-    progress.save_progress({"concepts": {"iterated_pd": 6}})
-    cards = _cards()
-    assert "Next up" in cards["Stag Hunt"]
-    assert sum("Next up" in card for card in cards.values()) == 1
 
-    progress.save_progress({"concepts": {k: 1 for k in
-                            ("iterated_pd", "stag_hunt", "chicken", "schelling", "ultimatum", "mixed_strategies")}})
-    assert not any("Next up" in card for card in _cards().values()), "nothing is next once everything is played"
+ALL = ("iterated_pd", "stag_hunt", "chicken", "schelling", "ultimatum", "mixed_strategies")
+
+
+@pytest.mark.parametrize("counts, expected", [
+    ({}, None),
+    ({"iterated_pd": 0}, None),                                   # zero counts are not play
+    ({"iterated_pd": 6}, "Stag Hunt"),
+    ({"chicken": 2}, "Prisoner's Dilemma"),                       # a later game alone: the first unplayed
+    ({"iterated_pd": 6, "stag_hunt": 7, "chicken": 1}, "Schelling Points"),
+    ({k: 1 for k in ALL}, None),                                  # nothing left
+])
+def test_the_menu_points_to_the_next_unplayed_game(counts, expected):
+    assert _next_up(counts) == expected

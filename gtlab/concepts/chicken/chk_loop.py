@@ -421,6 +421,9 @@ def fast_forward_chk_match(state: CHKArenaState) -> None:
 
     The move the player last chose in this match is repeated (Swerve or
     Straight, fast_forward_chk_move); before their first move it is SWERVE.
+    If the player has already thrown the wheel this round (the view hides the
+    button then), that round is played as decided; every round after it keeps
+    the wheel.
     Does NOT auto-throw the wheel — fast-forward always keeps the wheel
     and repeats the last move choice.  Mutates state in place.
     """
