@@ -311,7 +311,7 @@ def _render_predictability_readout(arena: MSArenaState) -> None:
         ("Longest streak", longest),
     ])
     if streak_note:
-        st.caption(f"Three in a row{streak_note}")
+        st.caption(f"The same move {streak} times in a row{streak_note}")
 
 
 # ---------------------------------------------------------------------------
