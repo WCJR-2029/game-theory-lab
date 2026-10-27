@@ -91,11 +91,13 @@ def _init_session_state() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _render_ms_sidebar() -> tuple[str, str, int, bool]:
+def _render_ms_sidebar(locked: bool = False) -> tuple[str, str, int, bool]:
     """Render Mixed Strategies sidebar knobs.
 
     Returns (game_name, opponent_name, memory_depth, mystery_mode).
     """
+    if locked:
+        st.sidebar.caption("Settings are locked during a run. Finish it, or Start over, to change them.")
     st.sidebar.title("Arena Setup")
 
     game_name: str = st.sidebar.radio(
@@ -106,6 +108,7 @@ def _render_ms_sidebar() -> tuple[str, str, int, bool]:
             "Matching Pennies: 2 moves, pure zero-sum. "
             "Rock-Paper-Scissors: 3 moves, cyclic dominance, draws possible."
         ),
+        disabled=locked,
     )
 
     opponent_names = [o.name for o in OPPONENTS] + [_ROTATING_NAME]
@@ -117,6 +120,7 @@ def _render_ms_sidebar() -> tuple[str, str, int, bool]:
             "Pick who you're playing against. "
             "Rotating cycles through all opponents in order."
         ),
+        disabled=locked,
     )
 
     memory_depth: int = st.sidebar.slider(
@@ -128,12 +132,14 @@ def _render_ms_sidebar() -> tuple[str, str, int, bool]:
             "How many of your recent moves the Pattern Reader watches. "
             "Deeper = catches longer patterns but needs more history to trigger."
         ),
+        disabled=locked,
     )
 
     mystery_mode: bool = st.sidebar.toggle(
         "Hide opponent identity",
         key="mp_mystery_toggle",
         help="Play without knowing which opponent you're facing.",
+        disabled=locked,
     )
 
     st.sidebar.divider()
@@ -674,7 +680,10 @@ def render() -> None:
     _init_session_state()
 
     # Render sidebar knobs
-    game_name, opponent_name, memory_depth, mystery_mode = _render_ms_sidebar()
+    # Settings only apply when a run starts, so they are locked while one is in progress.
+    arena_now = st.session_state.get(_KEY_ARENA)
+    locked = arena_now is not None and not arena_now.session_complete
+    game_name, opponent_name, memory_depth, mystery_mode = _render_ms_sidebar(locked=locked)
 
     # Use cached progress from session state (avoid disk I/O on every rerun)
     progress = st.session_state[_KEY_PROGRESS]

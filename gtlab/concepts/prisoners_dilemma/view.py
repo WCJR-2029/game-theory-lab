@@ -197,8 +197,10 @@ def _render_move_buttons(disabled: bool = False) -> str | None:
 # ---------------------------------------------------------------------------
 
 
-def _render_sidebar() -> tuple[list[str], float, bool]:
+def _render_sidebar(locked: bool = False) -> tuple[list[str], float, bool]:
     """Render PD sidebar knobs.  Returns (selected_names, noise, mystery_mode)."""
+    if locked:
+        st.sidebar.caption("Settings are locked during a run. Finish it, or Start over, to change them.")
     st.sidebar.title("Arena Setup")
 
     st.sidebar.subheader("Roster")
@@ -209,9 +211,9 @@ def _render_sidebar() -> tuple[list[str], float, bool]:
     all_names = list(STRATEGY_CLASSES.keys())
     col_all, col_clear = st.sidebar.columns(2)
     with col_all:
-        select_all = st.button("Select all", key="pd_roster_all", width="stretch")
+        select_all = st.button("Select all", key="pd_roster_all", width="stretch", disabled=locked)
     with col_clear:
-        clear = st.button("Clear", key="pd_roster_clear", width="stretch")
+        clear = st.button("Clear", key="pd_roster_clear", width="stretch", disabled=locked)
     # The ticks live in session state (default: the standard roster), so the two buttons can set them.
     for name in all_names:
         key = f"pd_roster_{name}"
@@ -225,6 +227,7 @@ def _render_sidebar() -> tuple[list[str], float, bool]:
             name,
             key=f"pd_roster_{name}",
             help=STRATEGY_DESCRIPTIONS.get(name, ""),
+            disabled=locked,
         )
         if checked:
             selected_names.append(name)
@@ -246,12 +249,13 @@ def _render_sidebar() -> tuple[list[str], float, bool]:
         step=0.01,
         format="%.2f",
         key="pd_noise_slider",
+        disabled=locked,
     )
 
     st.sidebar.subheader("Mystery Opponents")
     st.sidebar.caption("Hide each opponent's identity until you've played them.")
     mystery_mode = st.sidebar.toggle(
-        "Hide opponent identities", value=False, key="pd_mystery_toggle"
+        "Hide opponent identities", value=False, key="pd_mystery_toggle", disabled=locked
     )
 
     st.sidebar.divider()
@@ -537,7 +541,10 @@ def render() -> None:
     progress = st.session_state.progress
 
     # Sidebar setup knobs
-    selected_names, noise, mystery_mode = _render_sidebar()
+    # Settings only apply when a run starts, so they are locked while one is in progress.
+    arena_now = st.session_state.get(_KEY_ARENA)
+    locked = arena_now is not None and not arena_now.run_complete
+    selected_names, noise, mystery_mode = _render_sidebar(locked=locked)
 
     # --- Main header ---
     app_header(

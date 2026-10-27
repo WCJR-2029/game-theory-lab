@@ -53,6 +53,15 @@ were fixed under tests. The ones below changed how a game plays or looks, so the
   ADR-003); after the last game it offers "Back to the menu". The order is read from the registry, so a new rung
   joins the ladder by being added to the menu.
 
+### 5. Settings lock during a run; an empty pick-list can't start
+- **Problem.** Every sidebar setting is read only when a run starts, but changing one mid-run silently did nothing.
+  Unticking every opponent still started a game against a hidden default.
+- **Decision.** While a run is in progress the sidebar settings are off, with one line saying how to change them;
+  they unlock on the debrief, so "Play again" uses the new settings. With nothing picked in a pick-list, Start is off
+  with a line saying why; the arena rosters have "Select all" and "Clear".
+- **Alternatives.** Apply changes mid-run: rejected, a run's standings would mix two rule sets. A confirmation to
+  restart on change: rejected as more interruption than a disabled control that says why.
+
 ## Declined
 Recorded so they are not re-raised without new evidence.
 - **Resuming a run after a browser refresh.** It would mean persisting the whole arena (RNG and opponent state).

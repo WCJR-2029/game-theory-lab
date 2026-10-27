@@ -132,11 +132,13 @@ def _render_ult_on_demand_nudge(event_key: str | None, progress: dict) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _render_ult_sidebar() -> tuple[list[str], list[str], int, bool, bool]:
+def _render_ult_sidebar(locked: bool = False) -> tuple[list[str], list[str], int, bool, bool]:
     """Render Ultimatum sidebar knobs.
 
     Returns (proposer_names, responder_names, prize, mystery_mode, reputation_on).
     """
+    if locked:
+        st.sidebar.caption("Settings are locked during a run. Finish it, or Start over, to change them.")
     st.sidebar.title("Bargaining Setup")
 
     # --- Opponent variety ---
@@ -155,6 +157,7 @@ def _render_ult_sidebar() -> tuple[list[str], list[str], int, bool, bool]:
             value=True,
             key=f"ult_resp_{p.name}",
             help=p.description,
+            disabled=locked,
         )
         if checked:
             selected_proposers.append(p.name)
@@ -170,6 +173,7 @@ def _render_ult_sidebar() -> tuple[list[str], list[str], int, bool, bool]:
             value=True,
             key=f"ult_prop_{p.name}",
             help=p.description,
+            disabled=locked,
         )
         if checked:
             selected_responders.append(p.name)
@@ -187,6 +191,7 @@ def _render_ult_sidebar() -> tuple[list[str], list[str], int, bool, bool]:
         options=list(ULT_STAKE_OPTIONS.keys()),
         value="100 tokens",
         key="ult_stake_slider",
+        disabled=locked,
     )
     prize = ULT_STAKE_OPTIONS[stake_label]
 
@@ -197,7 +202,7 @@ def _render_ult_sidebar() -> tuple[list[str], list[str], int, bool, bool]:
         "Figure out their style from their offers and decisions."
     )
     mystery_mode = st.sidebar.toggle(
-        "Hide opponent identities", value=False, key="ult_mystery_toggle"
+        "Hide opponent identities", value=False, key="ult_mystery_toggle", disabled=locked
     )
 
     # --- Reputation toggle ---
@@ -207,7 +212,7 @@ def _render_ult_sidebar() -> tuple[list[str], list[str], int, bool, bool]:
         "Turn off to see how a fresh start changes the dynamic."
     )
     reputation_on = st.sidebar.toggle(
-        "Opponents remember you", value=True, key="ult_reputation_toggle"
+        "Opponents remember you", value=True, key="ult_reputation_toggle", disabled=locked
     )
 
     st.sidebar.divider()
@@ -747,8 +752,11 @@ def render() -> None:
     progress = st.session_state.progress
 
     # Sidebar knobs
+    # Settings only apply when a run starts, so they are locked while one is in progress.
+    arena_now = st.session_state.get(_KEY_ARENA)
+    locked = arena_now is not None and not arena_now.session_complete
     proposer_names, responder_names, prize, mystery_mode, reputation_on = (
-        _render_ult_sidebar()
+        _render_ult_sidebar(locked=locked)
     )
 
     # Main header

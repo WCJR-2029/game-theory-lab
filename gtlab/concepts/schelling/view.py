@@ -99,8 +99,10 @@ def _init_session_state() -> None:
 # ---------------------------------------------------------------------------
 
 
-def _render_sch_sidebar() -> tuple[bool, list[str]]:
+def _render_sch_sidebar(locked: bool = False) -> tuple[bool, list[str]]:
     """Render Schelling sidebar controls. Returns (hard_mode, selected_categories)."""
+    if locked:
+        st.sidebar.caption("Settings are locked during a run. Finish it, or Start over, to change them.")
     st.sidebar.title("Schelling Setup")
 
     st.sidebar.subheader("Puzzle Mode")
@@ -112,6 +114,7 @@ def _render_sch_sidebar() -> tuple[bool, list[str]]:
             "Mix in focal-vs-logic puzzles — where the obvious answer beats "
             "the clever one. See if salience can fool you."
         ),
+        disabled=locked,
     )
     if hard_mode:
         st.sidebar.caption(
@@ -129,6 +132,7 @@ def _render_sch_sidebar() -> tuple[bool, list[str]]:
             CATEGORY_DISPLAY[cat],
             value=default_on,
             key=f"sch_cat_{cat}",
+            disabled=locked,
         )
         if checked:
             selected_categories.append(cat)
@@ -553,7 +557,10 @@ def render() -> None:
     progress = st.session_state.progress
 
     # Sidebar knobs
-    hard_mode, selected_categories = _render_sch_sidebar()
+    # Settings only apply when a run starts, so they are locked while one is in progress.
+    arena_now = st.session_state.get(_KEY_SESSION)
+    locked = arena_now is not None and not session_complete(arena_now)
+    hard_mode, selected_categories = _render_sch_sidebar(locked=locked)
 
     # Main header
     app_header(
