@@ -9,10 +9,12 @@ allowed range is never sent to the app (the box shows it with a range warning), 
 
 from __future__ import annotations
 
+import pytest
 from streamlit.testing.v1 import AppTest
 
 from gtlab.concepts.schelling.sch_loop import current_puzzle
 from gtlab.concepts.schelling.view import int_bounds
+from gtlab.ui import progress
 
 
 def _session_until(kind: str) -> AppTest:
@@ -69,10 +71,14 @@ def test_a_split_starts_empty_too():
     assert _submit(at).proto.disabled
 
 
-def test_a_click_on_lock_in_with_no_pick_locks_nothing_in():
-    at = _session_until("int")
-    played = at.session_state["sch_session"].rounds_played
+@pytest.mark.parametrize("kind", ["int", "split"])
+def test_a_click_on_lock_in_with_no_pick_locks_nothing_in(kind):
+    at = _session_until(kind)
+    session = at.session_state["sch_session"]
+    played, counts = session.rounds_played, progress.load_progress()
     _submit(at).click()  # the browser keeps the button off, but a click can still arrive
     at.run()
     assert not at.exception
-    assert at.session_state["sch_session"].rounds_played == played
+    assert session.rounds_played == played and not session.submitted and session.player_pick is None
+    assert progress.load_progress() == counts
+    assert any(b.key and b.key.startswith("sch_submit_") for b in at.button), "still asking for a pick"

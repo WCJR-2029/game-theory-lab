@@ -147,6 +147,8 @@ def test_every_typed_number_is_judged_against_the_puzzle(puzzle_id, label, rejec
         return next(n for n in at.number_input if n.key.startswith(prefix))
 
     assert box().label == label
+    # A browser never sends a number outside a box's bounds: only Streamlit's own integer limits (+/-2**53) may apply.
+    assert box().proto.min <= -(2**53 - 1) and box().proto.max >= 2**53 - 1, "the box sets no range of its own"
     for typed in rejected:
         box().set_value(typed).run()
         assert not at.exception

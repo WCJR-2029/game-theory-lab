@@ -69,7 +69,8 @@ were fixed under tests. The ones below changed how a game plays or looks, so the
   app counted them ticked, and a Start click then crashed.
 - **Decision.** gtlab/ui/settings.py: every sidebar setting lives in its own session-state store and is handed back as
   the widget's starting value; code changes a setting by giving its widget a fresh key, never by writing widget state.
-  Start also re-checks the pick-list when clicked.
+  Start also re-checks the pick-list when clicked. A disabled control can still deliver a click, so every handler
+  behind one (Start, Select all / Clear, Lock in) checks its own condition again.
 
 ### 6. The menu remembers you
 - **Problem.** A player coming back the next day saw the identical menu, with no sign they had been there.
@@ -84,6 +85,16 @@ were fixed under tests. The ones below changed how a game plays or looks, so the
   long the run is and that Play-out can finish any match. Once something has been played, the menu marks the first
   game not yet played "Next up". Stag Hunt's and Chicken's second step no longer repeat the first step's prompt, so
   their buttons sit higher.
+
+### 8. A Schelling number is checked by the app, not by the box
+- **Problem.** Streamlit never sends the app a number outside a box's bounds; the box keeps showing what was typed.
+  A player who typed 7 and then -5 saw -5 and was told "You picked 7". The bounds also came from a rule
+  (`hi >= 10,000` means no limit) that caught the negative-numbers puzzle, so 0 (the crowd's favourite) and every
+  negative number couldn't be entered there.
+- **Decision.** The number boxes carry no bounds of their own. Every typed number reaches the app, which checks it
+  against the puzzle's range, names the range when it is outside, and keeps Lock in off. In the bank, a bound of
+  exactly +/-10,000 stands for "no limit"; a test holds every such puzzle's prompt to saying so. After lock-in the
+  reveal shows the saved pick, not the box's own state.
 
 ## Declined
 Recorded so they are not re-raised without new evidence.
