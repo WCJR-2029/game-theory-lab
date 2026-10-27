@@ -60,8 +60,12 @@ def load_progress() -> dict:
     try:
         with _PROGRESS_FILE.open("r", encoding="utf-8") as f:
             data = json.load(f)
-        # Basic schema validation
-        if not isinstance(data, dict) or "concepts" not in data:
+        # Schema validation: {"concepts": {game key: non-negative int}}.  Anything else is a
+        # damaged file and loads as a fresh start, so the menu can always open.
+        if not isinstance(data, dict) or not isinstance(data.get("concepts"), dict):
+            return _empty_progress()
+        counts = data["concepts"]
+        if not all(isinstance(k, str) and type(v) is int and v >= 0 for k, v in counts.items()):
             return _empty_progress()
         return data
     except (json.JSONDecodeError, OSError):
@@ -99,6 +103,19 @@ def increment_experience(progress: dict, concept: str, amount: int = 1) -> dict:
         progress["concepts"] = {}
     current = progress["concepts"].get(concept, 0)
     progress["concepts"][concept] = current + amount
+    return progress
+
+
+def record_play(concept: str, amount: int = 1) -> dict:
+    """Add to a game's count on disk and return the whole, current progress.
+
+    Reads the file first, so a copy held elsewhere (another game's view, another
+    browser tab) can't overwrite counts saved since it was loaded.  Callers keep
+    the returned dict as the one shared copy (st.session_state.progress).
+    """
+    progress = load_progress()
+    increment_experience(progress, concept, amount)
+    save_progress(progress)
     return progress
 
 

@@ -34,7 +34,7 @@ from gtlab.ui.nudges import (
 from gtlab.ui.progress import (
     NudgeState,
     get_nudge_state,
-    increment_experience,
+    record_play,
     load_progress,
     save_progress,
 )
@@ -60,7 +60,6 @@ from gtlab.ui.theme import (
 _KEY_ARENA = "mp_arena"
 _KEY_SHOW_SETUP = "mp_show_setup"
 _KEY_AWAITING_REVEAL = "mp_awaiting_reveal"
-_KEY_PROGRESS = "mp_progress"
 
 # Note: mp_game_name / mp_opponent_name / mp_mystery_mode were write-only state
 # (never read back from session_state — the sidebar widgets are the source of
@@ -81,9 +80,9 @@ def _init_session_state() -> None:
         st.session_state[_KEY_AWAITING_REVEAL] = False
     if "mp_memory_depth" not in st.session_state:
         st.session_state["mp_memory_depth"] = 2
-    # Cache progress in session state — avoid disk I/O on every rerun
-    if _KEY_PROGRESS not in st.session_state:
-        st.session_state[_KEY_PROGRESS] = load_progress()
+    # One progress copy for the whole app (the shell's), so the menu and every game agree.
+    if "progress" not in st.session_state:
+        st.session_state.progress = load_progress()
 
 
 # ---------------------------------------------------------------------------
@@ -426,12 +425,9 @@ def _handle_move(arena: MSArenaState, move: str, progress: dict) -> None:
 
 
 def _finish_session(arena: MSArenaState, progress: dict) -> None:
-    """End the session and increment progress."""
+    """End the session and count it (read-modify-write, into the app's one progress copy)."""
     arena.session_complete = True
-    increment_experience(progress, MS_CONCEPT_KEY, 1)
-    save_progress(progress)
-    # Update the cached progress
-    st.session_state[_KEY_PROGRESS] = progress
+    st.session_state.progress = record_play(MS_CONCEPT_KEY)
 
 
 # ---------------------------------------------------------------------------
@@ -685,8 +681,7 @@ def render() -> None:
     locked = arena_now is not None and not arena_now.session_complete
     game_name, opponent_name, memory_depth, mystery_mode = _render_ms_sidebar(locked=locked)
 
-    # Use cached progress from session state (avoid disk I/O on every rerun)
-    progress = st.session_state[_KEY_PROGRESS]
+    progress = st.session_state.progress
 
     arena: MSArenaState | None = st.session_state[_KEY_ARENA]
 

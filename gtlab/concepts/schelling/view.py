@@ -49,7 +49,7 @@ from gtlab.ui.nudges import (
 from gtlab.ui.progress import (
     load_progress,
     save_progress,
-    increment_experience,
+    record_play,
     get_nudge_state,
     NudgeState,
 )
@@ -470,9 +470,7 @@ def _render_puzzle_panel(session: SCHSession, progress: dict) -> None:
                 st.session_state[_KEY_LAST_NUDGE] = result.get("nudge_event")
 
                 # Increment progress when a round completes
-                prog = increment_experience(progress, SCH_CONCEPT_KEY, 1)
-                save_progress(prog)
-                st.session_state.progress = prog
+                progress = st.session_state.progress = record_play(SCH_CONCEPT_KEY)
 
                 st.rerun()
 

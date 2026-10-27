@@ -46,7 +46,7 @@ from gtlab.ui.nudges import (
 from gtlab.ui.progress import (
     load_progress,
     save_progress,
-    increment_experience,
+    record_play,
     get_nudge_state,
     NudgeState,
 )
@@ -467,9 +467,7 @@ def _render_current_match_panel(arena: SHArenaState, progress: dict) -> None:
             st.session_state[_KEY_LAST_NUDGE] = result.get("nudge_event")
 
             if result.get("match_complete") or result.get("status") == "match_complete":
-                prog = increment_experience(progress, SH_CONCEPT_KEY, 1)
-                save_progress(prog)
-                st.session_state.progress = prog
+                progress = st.session_state.progress = record_play(SH_CONCEPT_KEY)
 
             st.rerun()
 
@@ -489,9 +487,7 @@ def _render_current_match_panel(arena: SHArenaState, progress: dict) -> None:
                 ),
             ):
                 fast_forward_sh_match(arena)
-                prog = increment_experience(progress, SH_CONCEPT_KEY, 1)
-                save_progress(prog)
-                st.session_state.progress = prog
+                progress = st.session_state.progress = record_play(SH_CONCEPT_KEY)
                 st.rerun()
         with col_note:
             st.caption("Finishes this match for you.")

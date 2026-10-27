@@ -25,7 +25,7 @@ from gtlab.ui.game_loop import (
 )
 from gtlab.ui.nudges import get_nudge_text, classify_round_event, NUDGE_ROUND_START
 from gtlab.ui.progress import (
-    load_progress, save_progress, increment_experience,
+    load_progress, save_progress, record_play,
     get_nudge_state, NudgeState,
 )
 from gtlab.ui.theme import (
@@ -343,9 +343,7 @@ def _render_current_match_panel(arena: ArenaState, progress: dict) -> None:
         st.session_state[_KEY_LAST_NUDGE] = result.get("nudge_event")
 
         if result.get("match_complete") or result.get("status") == "run_complete":
-            prog = increment_experience(progress, CONCEPT_KEY, 1)
-            save_progress(prog)
-            st.session_state.progress = prog
+            progress = st.session_state.progress = record_play(CONCEPT_KEY)
 
         st.rerun()
 
@@ -366,9 +364,7 @@ def _render_current_match_panel(arena: ArenaState, progress: dict) -> None:
                 ),
             ):
                 fast_forward_match(arena)
-                prog = increment_experience(progress, CONCEPT_KEY, 1)
-                save_progress(prog)
-                st.session_state.progress = prog
+                progress = st.session_state.progress = record_play(CONCEPT_KEY)
                 st.rerun()
         with col_note:
             st.caption("Finishes this match for you.")

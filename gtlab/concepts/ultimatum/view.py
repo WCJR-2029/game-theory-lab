@@ -53,7 +53,7 @@ from gtlab.ui.nudges import (
 from gtlab.ui.progress import (
     load_progress,
     save_progress,
-    increment_experience,
+    record_play,
     get_nudge_state,
     NudgeState,
 )
@@ -818,9 +818,7 @@ def render() -> None:
     if arena.session_complete and not showing_result:
         # Increment progress once at the end
         if not st.session_state.get("ult_progress_saved", False):
-            prog = increment_experience(progress, ULT_CONCEPT_KEY, 1)
-            save_progress(prog)
-            st.session_state.progress = prog
+            progress = st.session_state.progress = record_play(ULT_CONCEPT_KEY)
             st.session_state["ult_progress_saved"] = True
         _render_debrief(arena, progress)
 
