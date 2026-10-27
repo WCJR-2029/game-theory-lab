@@ -113,7 +113,9 @@ were fixed under tests. The ones below changed how a game plays or looks, so the
   payoffs, and each line says no more than they support: an opponent that remembers *can* answer what you did (some
   ignore it); a shared Stag needs the other hunter to actually show up (with noise, trust is not the only risk); a
   thrown wheel gives a player who sees it a reason to swerve (it also pays against one who swerves anyway). The
-  banner headline reads "Run complete: 2nd of 7 (you and 6 opponents) — 154 pts".
+  banner headline reads "Run complete: 2nd of 7 (you and 6 opponents) — 154 pts", with a line under it saying the
+  run is over and that "Play again" and "Next on the ladder" are at the bottom. The buttons stay after the debrief,
+  so it is read first.
 - **Alternatives.** Showing the idea before play: rejected, it would name the lesson before it is felt (ADR-005:
   structure is named only after the feel). Showing it to new players only: rejected, a first full run already moves
   a player past "new" (6 matches), so it would never show.
@@ -135,5 +137,10 @@ Recorded so they are not re-raised without new evidence.
 - **A shorter run, again.** The latest round still had four of five players call the default run long, now with the
   length stated up front and Play-out named on the button. Kept, for the reason above; the most persistent remaining
   complaint, so the first thing to revisit if the standings stop being the point.
+- **The Stag Hunt card says the stag "beats hunting hare alone ... but only if you both show up".** That is the
+  game's setup (a stag needs two hunters), as Chicken's card says both going Straight crashes; what is named after
+  play is the lesson about trust and what announcements are worth.
+- **A "Continue" step between matches.** A player clicked Play-out where the next match's buttons had appeared; a
+  step per match would cost every player six extra clicks a run. The match-over line already announces the switch.
 - **The move buttons shift down after the first round.** The last-result banner appears from round 2 on; a blank
   placeholder in round 1 would be empty space on the first screen a player sees.

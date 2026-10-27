@@ -612,7 +612,7 @@ def debrief_tips(arena: SHArenaState) -> tuple[str, str]:
     if not tries:
         tries.append("Put another opponent in with the Bluffer and compare what their announcements are worth.")
     more = (
-        "What happens when you turn on Mystery opponents and try to read the announcements?"
+        "What happens when you turn on Mystery Opponents in the sidebar and try to read the announcements?"
         if not arena.mystery_mode else
         "What happens when you can see who you're playing again?"
     )
@@ -642,6 +642,7 @@ def _render_sh_debrief(arena: SHArenaState, progress: dict) -> None:
         kind = "draw"
 
     result_banner(kind, standing_headline(your_rank, total, your_score), your_play_text(arena))
+    st.caption('That\'s the end of this run. "Play again" and "Next on the ladder" are at the bottom of the page.')
 
     reveal_body = _make_sh_reveal_body(rows)
     if reveal_body:

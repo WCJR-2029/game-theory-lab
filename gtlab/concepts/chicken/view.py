@@ -662,6 +662,7 @@ def _render_chk_debrief(arena: CHKArenaState, progress: dict) -> None:
         kind = "draw"
 
     result_banner(kind, standing_headline(your_rank, total, your_score), your_play_text(arena))
+    st.caption('That\'s the end of this run. "Play again" and "Next on the ladder" are at the bottom of the page.')
 
     reveal_body = _make_chk_reveal_body(rows, arena)
     if reveal_body:

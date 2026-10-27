@@ -683,7 +683,7 @@ def debrief_tips(arena: ULTArenaState) -> tuple[str, str]:
     if arena.prize < max(ULT_STAKE_OPTIONS.values()):
         tries.append("Try raising the stake size and notice how your tolerance for unfairness shifts.")
     if not arena.mystery_mode:
-        tries.append("Turn on Mystery opponents and see if you can read their style before they're revealed.")
+        tries.append("Turn on Mystery Opponents in the sidebar and see if you can read their style before they're revealed.")
     if not tries:
         tries.append("Try a small stake and notice whether a stingy offer stings more.")
     more = (

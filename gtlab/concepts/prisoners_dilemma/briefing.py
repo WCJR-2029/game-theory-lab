@@ -62,6 +62,6 @@ WHY_IT_MATTERS = (
 )
 
 YOUR_JOB = (
-    "Each round, click Cooperate or Defect. "
-    "You'll do this 10 times against each bot personality."
+    "Each round, click Cooperate or Defect: 10 rounds against each opponent. "
+    'The "Play out" button can finish a match for you whenever you like.'
 )
