@@ -470,7 +470,7 @@ def the_idea(game) -> str:
         f"Both cooperating pays {game.payoff_00} each and both defecting {game.payoff_11} each, yet whatever the "
         f"other does, defecting pays you more in a single round ({game.payoff_10} instead of {game.payoff_00}, or "
         f"{game.payoff_11} instead of {game.payoff_01}). That pull, away from the outcome you'd both prefer, is the "
-        "dilemma; over many rounds, what you do comes back to you."
+        "dilemma; over many rounds, an opponent that remembers can answer what you did."
     )
 
 

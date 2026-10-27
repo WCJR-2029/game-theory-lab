@@ -258,20 +258,13 @@ def _render_chk_sidebar(locked: bool = False) -> tuple[list[str], float, bool, i
         "and changes how tempting Straight feels. "
         "Takes effect on the next run."
     )
-    crash_options = {
-        "Gentle (-2)": -2,
-        "Low (-5)": -5,
-        "Default (-10)": -10,
-        "Serious (-20)": -20,
-        "Catastrophic (-50)": -50,
-    }
     crash_label = remembered(
         st.sidebar.select_slider, "chk_crash_slider", "Default (-10)",
         label="Stakes dial",
-        options=list(crash_options.keys()),
+        options=list(CRASH_OPTIONS.keys()),
         disabled=locked,
     )
-    crash = crash_options[crash_label]
+    crash = CRASH_OPTIONS[crash_label]
 
     st.sidebar.subheader("Noise")
     st.sidebar.caption(
@@ -635,13 +628,23 @@ def debrief_tips(arena: CHKArenaState) -> tuple[str, str]:
     return " ".join(tries), more
 
 
+#: The stakes dial's settings: the both-Straight (crash) payoff for each label.
+CRASH_OPTIONS = {
+    "Gentle (-2)": -2,
+    "Low (-5)": -5,
+    "Default (-10)": -10,
+    "Serious (-20)": -20,
+    "Catastrophic (-50)": -50,
+}
+
+
 def the_idea(game) -> str:
     """The debrief's plain-words idea, from the game's own payoffs (ADR-013 §9: felt first, named after)."""
     return (
         f"Going Straight while they swerve wins {game.payoff_10}; swerving while they go Straight costs "
         f"{-game.payoff_01}; both swerving is {game.payoff_00}; both going Straight is the crash, {game.payoff_11} "
         "each. Each of you wants the other to be the one who swerves, and if neither does, you both crash. That is "
-        "why throwing away the wheel can work: it only pays when they see it and believe it."
+        "why throwing away the wheel can work: an opponent who sees it, and believes it, is better off swerving."
     )
 
 

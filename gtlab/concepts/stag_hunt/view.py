@@ -623,8 +623,8 @@ def the_idea(game) -> str:
     """The debrief's plain-words idea, from the game's own payoffs (ADR-013 §9: felt first, named after)."""
     return (
         f"Both hunting Stag pays the most: {game.payoff_00} each. Hare pays {game.payoff_11} whatever the other "
-        f"does, and a Stag hunted alone pays {game.payoff_01}. Nothing tempts you away from a shared Stag; the only "
-        "question is whether you trust the other hunter to show up, and announcements are only words."
+        f"does, and a Stag hunted alone pays {game.payoff_01}. Nothing tempts you away from a shared Stag; the risk "
+        "is that it needs the other hunter to actually show up, and announcements are only words."
     )
 
 
