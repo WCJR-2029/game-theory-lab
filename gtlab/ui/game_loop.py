@@ -429,10 +429,10 @@ def fast_forward_move(state: ArenaState) -> Move:
 def fast_forward_match(state: ArenaState) -> None:
     """Play out the remaining rounds of the current match instantly.
 
-    The player's last actual move is repeated for the auto-played rounds.
-    If no move has been made yet (first round), defaults to COOPERATE.
-    Mutates state in place; does NOT advance to the next opponent — the
-    normal _finalize_match path handles that (called from step_round).
+    The move the player last chose in this match is repeated for the
+    auto-played rounds (fast_forward_move); before their first move it is
+    COOPERATE.  Plays until the match ends: step_round's _finalize_match
+    then moves to the next opponent, or completes the run.
 
     After this call the caller should check state.run_complete or
     state.current_opponent_idx to decide what to show next.

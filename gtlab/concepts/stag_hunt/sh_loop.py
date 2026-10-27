@@ -401,9 +401,9 @@ def fast_forward_sh_move(state: SHArenaState) -> Move:
 def fast_forward_sh_match(state: SHArenaState) -> None:
     """Play out the remaining rounds of the current SH match instantly.
 
-    For auto-played rounds the player's last committed move is repeated as both
-    the signal and the commit.  If no move has been made yet, defaults to
-    COOPERATE (hunt Stag).
+    For auto-played rounds the move the player last chose in this match
+    (fast_forward_sh_move) is repeated as both the announcement and the hunt;
+    before their first move it is COOPERATE (hunt Stag).
 
     Mutates state in place.  After this call the caller should check
     state.run_complete or state.rounds_this_match to decide what to show next.

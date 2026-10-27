@@ -544,7 +544,7 @@ class TestSCHArenaAppTest:
         at = _enter_concept(at, "schelling")
         assert not at.exception
 
-        # numbers only (5 puzzles)
+        # numbers only (8 puzzles)
         for cat in ["places_times", "words_categories", "splitting"]:
             at.checkbox(key=f"sch_cat_{cat}").uncheck()
         at.run()
@@ -567,7 +567,7 @@ class TestSCHArenaAppTest:
 
         btn_keys = [b.key for b in at.button]
         assert "sch_play_again" in btn_keys, (
-            "numbers-only session should complete in ≤5 puzzles"
+            "numbers-only session should complete in 8 puzzles"
         )
 
     def test_sch_back_to_menu_works(self):

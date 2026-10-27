@@ -419,8 +419,8 @@ def fast_forward_chk_move(state: CHKArenaState) -> Move:
 def fast_forward_chk_match(state: CHKArenaState) -> None:
     """Play out the remaining rounds of the current Chicken match instantly.
 
-    The player's last actual move is repeated (Swerve or Straight).
-    Defaults to SWERVE (COOPERATE) if no move has been made yet.
+    The move the player last chose in this match is repeated (Swerve or
+    Straight, fast_forward_chk_move); before their first move it is SWERVE.
     Does NOT auto-throw the wheel — fast-forward always keeps the wheel
     and repeats the last move choice.  Mutates state in place.
     """

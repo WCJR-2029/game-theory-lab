@@ -6,8 +6,10 @@ repeatable, with scalable difficulty. A sandbox, not a course. Built in phases; 
 
 ---
 
-## Status: COMPLETE & STABLE — six concepts, fully polished (last updated 2026-06-18)
-All six game concepts are built, visually elevated (Refined Dark Lab), onboarded (per-game briefings + end-of-run reveals + a "where else does this shape show up?" transfer beat), and refined per a 4-lens cold review across three tiers (Experience focus · Coherence + Teaching · Engineering dedup). **778 tests pass, AppTest-gated, stderr-clean, de-personalized.** Run `streamlit run app.py`.
+## Status: COMPLETE & STABLE — six concepts, fully polished, playtested (last updated 2026-10-26)
+All six game concepts are built, visually elevated (Refined Dark Lab), onboarded (per-game briefings + end-of-run reveals + a "where else does this shape show up?" transfer beat), and refined per a 4-lens cold review across three tiers (Experience focus · Coherence + Teaching · Engineering dedup). **1018 tests pass, AppTest-gated, stderr-clean, de-personalized.** Run `streamlit run app.py`.
+
+**(latest) First-user playtest pass — 2026-10 (ADR-013).** Cold first-time-user sessions were run against the Lab several times, with fixes between rounds and an outside review of each batch. Teaching copy is now checked against the game (nudges true to the round and to the payoffs, briefings true to the code, no lesson stated before play); Ultimatum has Dictator rounds on both sides; the next decision sits above the teaching note; debriefs report your own play and offer the next game on the ladder; empty pick-lists can't start; settings lock during a run; the menu shows what you've played; progress is counted read-modify-write. Declined items are listed in ADR-013.
 
 ### ▶ When you come back — where to resume
 - **Run it:** `python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && streamlit run app.py`
