@@ -11,6 +11,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from gtlab.ui.settings import remembered
+
 from gtlab.concepts.mixed_strategies.briefing import (
     STORY,
     HOW_IT_WORKS,
@@ -78,8 +80,6 @@ def _init_session_state() -> None:
         st.session_state[_KEY_SHOW_SETUP] = True
     if _KEY_AWAITING_REVEAL not in st.session_state:
         st.session_state[_KEY_AWAITING_REVEAL] = False
-    if "mp_memory_depth" not in st.session_state:
-        st.session_state["mp_memory_depth"] = 2
     # One progress copy for the whole app (the shell's), so the menu and every game agree.
     if "progress" not in st.session_state:
         st.session_state.progress = load_progress()
@@ -99,44 +99,41 @@ def _render_ms_sidebar(locked: bool = False) -> tuple[str, str, int, bool]:
         st.sidebar.caption("Settings are locked during a run. Finish it, or Start over, to change them.")
     st.sidebar.title("Arena Setup")
 
-    game_name: str = st.sidebar.radio(
-        "Game",
+    game_name: str = remembered(
+        st.sidebar.radio, "mp_game_select", "Matching Pennies",
+        label="Game",
         options=["Matching Pennies", "Rock-Paper-Scissors"],
-        key="mp_game_select",
         help=(
-            "Matching Pennies: 2 moves, pure zero-sum. "
-            "Rock-Paper-Scissors: 3 moves, cyclic dominance, draws possible."
+            "Matching Pennies: 2 moves, pure zero-sum. Rock-Paper-Scissors: 3 moves, cyclic "
+            "dominance, draws possible."
         ),
         disabled=locked,
     )
 
     opponent_names = [o.name for o in OPPONENTS] + [_ROTATING_NAME]
-    opponent_name: str = st.sidebar.selectbox(
-        "Opponent",
+    opponent_name: str = remembered(
+        st.sidebar.selectbox, "mp_opponent_select", opponent_names[0],
+        label="Opponent",
         options=opponent_names,
-        key="mp_opponent_select",
-        help=(
-            "Pick who you're playing against. "
-            "Rotating cycles through all opponents in order."
-        ),
+        help="Pick who you're playing against. Rotating cycles through all opponents in order.",
         disabled=locked,
     )
 
-    memory_depth: int = st.sidebar.slider(
-        "Pattern Reader memory depth",
+    memory_depth: int = remembered(
+        st.sidebar.slider, "mp_memory_depth", 2,
+        label="Pattern Reader memory depth",
         min_value=1,
         max_value=5,
-        key="mp_memory_depth",
         help=(
-            "How many of your recent moves the Pattern Reader watches. "
-            "Deeper = catches longer patterns but needs more history to trigger."
+            "How many of your recent moves the Pattern Reader watches. Deeper = catches longer "
+            "patterns but needs more history to trigger."
         ),
         disabled=locked,
     )
 
-    mystery_mode: bool = st.sidebar.toggle(
-        "Hide opponent identity",
-        key="mp_mystery_toggle",
+    mystery_mode: bool = remembered(
+        st.sidebar.toggle, "mp_mystery_toggle", False,
+        label="Hide opponent identity",
         help="Play without knowing which opponent you're facing.",
         disabled=locked,
     )

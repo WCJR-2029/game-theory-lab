@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from gtlab.ui.settings import remembered
+
 from gtlab.concepts.ultimatum.briefing import (
     STORY,
     HOW_IT_WORKS,
@@ -152,10 +154,9 @@ def _render_ult_sidebar(locked: bool = False) -> tuple[list[str], list[str], int
     selected_proposers: list[str] = []
     st.sidebar.write("**When they propose, they play like:**")
     for p in PROPOSER_PROFILES:
-        checked = st.sidebar.checkbox(
-            p.name,
-            value=True,
-            key=f"ult_resp_{p.name}",
+        checked = remembered(
+            st.sidebar.checkbox, f'ult_resp_{p.name}', True,
+            label=p.name,
             help=p.description,
             disabled=locked,
         )
@@ -168,10 +169,9 @@ def _render_ult_sidebar(locked: bool = False) -> tuple[list[str], list[str], int
     selected_responders: list[str] = []
     st.sidebar.write("**When you propose, they respond like:**")
     for p in RESPONDER_PROFILES:
-        checked = st.sidebar.checkbox(
-            p.name,
-            value=True,
-            key=f"ult_prop_{p.name}",
+        checked = remembered(
+            st.sidebar.checkbox, f'ult_prop_{p.name}', True,
+            label=p.name,
             help=p.description,
             disabled=locked,
         )
@@ -186,11 +186,10 @@ def _render_ult_sidebar(locked: bool = False) -> tuple[list[str], list[str], int
         "The total prize being split each round. "
         "Try a huge pot and notice how your calculus shifts."
     )
-    stake_label = st.sidebar.select_slider(
-        "Prize per round",
+    stake_label = remembered(
+        st.sidebar.select_slider, "ult_stake_slider", "100 tokens",
+        label="Prize per round",
         options=list(ULT_STAKE_OPTIONS.keys()),
-        value="100 tokens",
-        key="ult_stake_slider",
         disabled=locked,
     )
     prize = ULT_STAKE_OPTIONS[stake_label]
@@ -201,8 +200,10 @@ def _render_ult_sidebar(locked: bool = False) -> tuple[list[str], list[str], int
         "Hide who you're negotiating with. "
         "Figure out their style from their offers and decisions."
     )
-    mystery_mode = st.sidebar.toggle(
-        "Hide opponent identities", value=False, key="ult_mystery_toggle", disabled=locked
+    mystery_mode = remembered(
+        st.sidebar.toggle, "ult_mystery_toggle", False,
+        label="Hide opponent identities",
+        disabled=locked,
     )
 
     # --- Reputation toggle ---
@@ -211,8 +212,10 @@ def _render_ult_sidebar(locked: bool = False) -> tuple[list[str], list[str], int
         "When on, opponents remember how you've treated them and adjust. "
         "Turn off to see how a fresh start changes the dynamic."
     )
-    reputation_on = st.sidebar.toggle(
-        "Opponents remember you", value=True, key="ult_reputation_toggle", disabled=locked
+    reputation_on = remembered(
+        st.sidebar.toggle, "ult_reputation_toggle", True,
+        label="Opponents remember you",
+        disabled=locked,
     )
 
     st.sidebar.divider()
@@ -793,7 +796,11 @@ def render() -> None:
             disabled_reason="Pick at least one opponent style in each sidebar list to start.",
         )
 
-        if started:
+        # Start is off with nothing picked, but a click can still arrive (the browser can lag the app);
+        # never start, or crash, on an empty pick-list.
+        if started and (not proposer_names or not responder_names):
+            st.warning("Pick at least one opponent style in each sidebar list to start.")
+        elif started:
             arena = init_ult_arena(
                 proposer_names=proposer_names,
                 responder_names=responder_names,

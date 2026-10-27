@@ -65,6 +65,7 @@ from gtlab.ui.theme import (
     intro_above_fold,
     transfer_expander,
 )
+from gtlab.ui.settings import remembered, reset_setting
 from gtlab.ui.utils import ordinal, match_over_line, running_total, standings_halves, top_bot_lead
 from gtlab.ui.utils import play_out_help, your_play_line
 from gtlab.concepts.stag_hunt.briefing import (
@@ -239,19 +240,15 @@ def _render_sh_sidebar(locked: bool = False) -> tuple[list[str], float, bool]:
         select_all = st.button("Select all", key="sh_roster_all", width="stretch", disabled=locked)
     with col_clear:
         clear = st.button("Clear", key="sh_roster_clear", width="stretch", disabled=locked)
-    # The ticks live in session state (default: the standard roster), so the two buttons can set them.
-    for name in all_names:
-        key = f"sh_roster_{name}"
-        if select_all or clear:
-            st.session_state[key] = select_all
-        elif key not in st.session_state:
-            st.session_state[key] = name in SH_DEFAULT_SELECTED
+    if select_all or clear:
+        for name in all_names:
+            reset_setting(f"sh_roster_{name}", select_all)
     selected_names = []
     for name in all_names:
-        checked = st.sidebar.checkbox(
-            name,
-            key=f"sh_roster_{name}",
-            help=SH_STRATEGY_DESCRIPTIONS.get(name, ""),
+        checked = remembered(
+            st.sidebar.checkbox, f'sh_roster_{name}', name in SH_DEFAULT_SELECTED,
+            label=name,
+            help=SH_STRATEGY_DESCRIPTIONS.get(name, ''),
             disabled=locked,
         )
         if checked:
@@ -266,14 +263,13 @@ def _render_sh_sidebar(locked: bool = False) -> tuple[list[str], float, bool]:
         "When noise is above zero, any committed move can misfire and flip. "
         "Notice how noise interacts with trust — a slip looks just like a betrayal."
     )
-    noise = st.sidebar.slider(
-        "Chance a move misfires",
+    noise = remembered(
+        st.sidebar.slider, "sh_noise_slider", 0.0,
+        label="Chance a move misfires",
         min_value=0.0,
         max_value=0.3,
-        value=0.0,
         step=0.01,
         format="%.2f",
-        key="sh_noise_slider",
         disabled=locked,
     )
 
@@ -282,8 +278,10 @@ def _render_sh_sidebar(locked: bool = False) -> tuple[list[str], float, bool]:
         "Hide opponent identities. You can still see their announcements — "
         "that's part of the puzzle."
     )
-    mystery_mode = st.sidebar.toggle(
-        "Hide opponent identities", value=False, key="sh_mystery_toggle", disabled=locked
+    mystery_mode = remembered(
+        st.sidebar.toggle, "sh_mystery_toggle", False,
+        label="Hide opponent identities",
+        disabled=locked,
     )
 
     st.sidebar.divider()
@@ -726,7 +724,11 @@ def render() -> None:
             ),
         )
 
-        if started:
+        # Start is off with nothing picked, but a click can still arrive (the browser can lag the app);
+        # never start, or crash, on an empty pick-list.
+        if started and (not selected_names):
+            st.warning("Pick at least one opponent in the sidebar to start.")
+        elif started:
             arena = init_sh_arena(selected_names, noise, mystery_mode)
             st.session_state[_KEY_ARENA] = arena
             st.session_state[_KEY_SHOW_SETUP] = False

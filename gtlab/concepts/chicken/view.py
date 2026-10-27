@@ -72,6 +72,7 @@ from gtlab.ui.theme import (
     intro_above_fold,
     transfer_expander,
 )
+from gtlab.ui.settings import remembered, reset_setting
 from gtlab.ui.utils import ordinal, match_over_line, running_total, standings_halves, top_bot_lead
 from gtlab.ui.utils import play_out_help, your_play_line
 
@@ -228,19 +229,15 @@ def _render_chk_sidebar(locked: bool = False) -> tuple[list[str], float, bool, i
         select_all = st.button("Select all", key="chk_roster_all", width="stretch", disabled=locked)
     with col_clear:
         clear = st.button("Clear", key="chk_roster_clear", width="stretch", disabled=locked)
-    # The ticks live in session state (default: the standard roster), so the two buttons can set them.
-    for name in all_names:
-        key = f"chk_roster_{name}"
-        if select_all or clear:
-            st.session_state[key] = select_all
-        elif key not in st.session_state:
-            st.session_state[key] = name in CHK_DEFAULT_SELECTED
+    if select_all or clear:
+        for name in all_names:
+            reset_setting(f"chk_roster_{name}", select_all)
     selected_names = []
     for name in all_names:
-        checked = st.sidebar.checkbox(
-            name,
-            key=f"chk_roster_{name}",
-            help=CHK_STRATEGY_DESCRIPTIONS.get(name, ""),
+        checked = remembered(
+            st.sidebar.checkbox, f'chk_roster_{name}', name in CHK_DEFAULT_SELECTED,
+            label=name,
+            help=CHK_STRATEGY_DESCRIPTIONS.get(name, ''),
             disabled=locked,
         )
         if checked:
@@ -263,11 +260,10 @@ def _render_chk_sidebar(locked: bool = False) -> tuple[list[str], float, bool, i
         "Serious (-20)": -20,
         "Catastrophic (-50)": -50,
     }
-    crash_label = st.sidebar.select_slider(
-        "Stakes dial",
+    crash_label = remembered(
+        st.sidebar.select_slider, "chk_crash_slider", "Default (-10)",
+        label="Stakes dial",
         options=list(crash_options.keys()),
-        value="Default (-10)",
-        key="chk_crash_slider",
         disabled=locked,
     )
     crash = crash_options[crash_label]
@@ -277,14 +273,13 @@ def _render_chk_sidebar(locked: bool = False) -> tuple[list[str], float, bool, i
         "When noise is above zero, any uncommitted move can misfire and flip. "
         "A committed Straight stays Straight — commitment is noise-proof."
     )
-    noise = st.sidebar.slider(
-        "Chance a move misfires",
+    noise = remembered(
+        st.sidebar.slider, "chk_noise_slider", 0.0,
+        label="Chance a move misfires",
         min_value=0.0,
         max_value=0.3,
-        value=0.0,
         step=0.01,
         format="%.2f",
-        key="chk_noise_slider",
         disabled=locked,
     )
 
@@ -293,8 +288,10 @@ def _render_chk_sidebar(locked: bool = False) -> tuple[list[str], float, bool, i
         "Hide opponent identities. Watch their commitment decisions — "
         "that's how you'll learn who you're up against."
     )
-    mystery_mode = st.sidebar.toggle(
-        "Hide opponent identities", value=False, key="chk_mystery_toggle", disabled=locked
+    mystery_mode = remembered(
+        st.sidebar.toggle, "chk_mystery_toggle", False,
+        label="Hide opponent identities",
+        disabled=locked,
     )
 
     st.sidebar.divider()
@@ -743,7 +740,11 @@ def render() -> None:
             ),
         )
 
-        if started:
+        # Start is off with nothing picked, but a click can still arrive (the browser can lag the app);
+        # never start, or crash, on an empty pick-list.
+        if started and (not selected_names):
+            st.warning("Pick at least one opponent in the sidebar to start.")
+        elif started:
             arena = init_chk_arena(selected_names, noise, mystery_mode, crash=crash)
             st.session_state[_KEY_ARENA] = arena
             st.session_state[_KEY_SHOW_SETUP] = False

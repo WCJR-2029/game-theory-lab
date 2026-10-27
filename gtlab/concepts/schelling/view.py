@@ -24,6 +24,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from gtlab.ui.settings import remembered
+
 from gtlab.concepts.schelling.sch_loop import (
     SCHSession,
     SCH_CONCEPT_KEY,
@@ -106,13 +108,12 @@ def _render_sch_sidebar(locked: bool = False) -> tuple[bool, list[str]]:
     st.sidebar.title("Schelling Setup")
 
     st.sidebar.subheader("Puzzle Mode")
-    hard_mode = st.sidebar.toggle(
-        "Hard mode",
-        value=False,
-        key="sch_hard_mode_toggle",
+    hard_mode = remembered(
+        st.sidebar.toggle, "sch_hard_mode_toggle", False,
+        label="Hard mode",
         help=(
-            "Mix in focal-vs-logic puzzles — where the obvious answer beats "
-            "the clever one. See if salience can fool you."
+            "Mix in focal-vs-logic puzzles — where the obvious answer beats the clever one. See "
+            "if salience can fool you."
         ),
         disabled=locked,
     )
@@ -128,10 +129,9 @@ def _render_sch_sidebar(locked: bool = False) -> tuple[bool, list[str]]:
     selected_categories: list[str] = []
     for cat in ALL_CATEGORIES:
         default_on = True
-        checked = st.sidebar.checkbox(
-            CATEGORY_DISPLAY[cat],
-            value=default_on,
-            key=f"sch_cat_{cat}",
+        checked = remembered(
+            st.sidebar.checkbox, f'sch_cat_{cat}', default_on,
+            label=CATEGORY_DISPLAY[cat],
             disabled=locked,
         )
         if checked:
@@ -597,7 +597,11 @@ def render() -> None:
             disabled_reason="Pick at least one category in the sidebar to start.",
         )
 
-        if started:
+        # Start is off with nothing picked, but a click can still arrive (the browser can lag the app);
+        # never start, or crash, on an empty pick-list.
+        if started and (not selected_categories):
+            st.warning("Pick at least one category in the sidebar to start.")
+        elif started:
             session = init_sch_session(hard_mode, selected_categories)
             st.session_state[_KEY_SESSION] = session
 

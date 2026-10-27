@@ -62,6 +62,15 @@ were fixed under tests. The ones below changed how a game plays or looks, so the
 - **Alternatives.** Apply changes mid-run: rejected, a run's standings would mix two rule sets. A confirmation to
   restart on change: rejected as more interruption than a disabled control that says why.
 
+### 5b. Settings are remembered outside the widgets
+- **Problem.** Streamlit forgets a widget's value while it isn't drawn, so leaving a game for the menu reset its
+  sidebar settings; mid-run, the locked sidebar then showed settings the run wasn't using. Writing the roster's ticks
+  into the checkboxes' own state (for Select all / Clear) could also leave the browser showing them unticked while the
+  app counted them ticked, and a Start click then crashed.
+- **Decision.** gtlab/ui/settings.py: every sidebar setting lives in its own session-state store and is handed back as
+  the widget's starting value; code changes a setting by giving its widget a fresh key, never by writing widget state.
+  Start also re-checks the pick-list when clicked.
+
 ### 6. The menu remembers you
 - **Problem.** A player coming back the next day saw the identical menu, with no sign they had been there.
 - **Decision.** Each menu card shows "You've played N <matches / puzzles / sessions>" from the anonymous per-game
