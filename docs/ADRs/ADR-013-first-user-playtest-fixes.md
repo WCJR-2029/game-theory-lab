@@ -112,7 +112,8 @@ were fixed under tests. The ones below changed how a game plays or looks, so the
   as the notes (ADR-005): felt first, named after, and not repeated forever. Tests hold every claim in it to the
   payoffs, and each line says no more than they support: an opponent that remembers *can* answer what you did (some
   ignore it); a shared Stag needs the other hunter to actually show up (with noise, trust is not the only risk); a
-  thrown wheel gives a player who sees it a reason to swerve (it also pays against one who swerves anyway). The banner headline reads "Run complete: 2nd of 7 (you and 6 opponents) — 154 pts".
+  thrown wheel gives a player who sees it a reason to swerve (it also pays against one who swerves anyway). The
+  banner headline reads "Run complete: 2nd of 7 (you and 6 opponents) — 154 pts".
 - **Alternatives.** Showing the idea before play: rejected, it would name the lesson before it is felt (ADR-005:
   structure is named only after the feel). Showing it to new players only: rejected, a first full run already moves
   a player past "new" (6 matches), so it would never show.
