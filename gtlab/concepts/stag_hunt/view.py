@@ -596,14 +596,16 @@ def your_play_text(arena: SHArenaState) -> str:
 
 
 def debrief_tips(arena: SHArenaState) -> tuple[str, str]:
-    """(tip for a new player, tip once they have some experience). Only suggests what this run didn't already do."""
+    """(tip for a new player, tip once they have some experience). Never suggests a setting this run already used."""
     tries = []
     if arena.noise == 0:
         tries.append("Try turning on noise and notice how trust falls apart differently.")
     if "Bluffer" not in arena.selected_bot_names:
         tries.append("Add the Bluffer to the roster and watch what happens to announcements.")
-    if not tries:
+    if not tries and len(arena.selected_bot_names) > 1:
         tries.append("Try a smaller roster and watch one opponent's announcements closely.")
+    if not tries:
+        tries.append("Put another opponent in with the Bluffer and compare what their announcements are worth.")
     more = (
         "What happens when you turn on Mystery opponents and try to read the announcements?"
         if not arena.mystery_mode else

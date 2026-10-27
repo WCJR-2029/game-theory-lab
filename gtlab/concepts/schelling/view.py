@@ -404,7 +404,7 @@ def _make_reveal_body(session: SCHSession) -> str:
 
 
 def debrief_tips(session: SCHSession) -> tuple[str, str]:
-    """(tip for a new player, tip once they have some experience). Only suggests what this run didn't already do."""
+    """(tip for a new player, tip once they have some experience). Never suggests a setting this run already used."""
     if not session.hard_mode:
         return (
             "Try hard mode in the sidebar to see focal-vs-logic puzzles - where the clever answer draws fewer "

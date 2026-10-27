@@ -678,7 +678,7 @@ def _make_reveal_body(arena: ULTArenaState) -> str:
 
 
 def debrief_tips(arena: ULTArenaState) -> tuple[str, str]:
-    """(tip for a new player, tip once they have some experience). Only suggests what this run didn't already do."""
+    """(tip for a new player, tip once they have some experience). Never suggests a setting this run already used."""
     tries = []
     if arena.prize < max(ULT_STAKE_OPTIONS.values()):
         tries.append("Try raising the stake size and notice how your tolerance for unfairness shifts.")

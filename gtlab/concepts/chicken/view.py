@@ -614,7 +614,7 @@ def your_play_text(arena: CHKArenaState) -> str:
 
 
 def debrief_tips(arena: CHKArenaState) -> tuple[str, str]:
-    """(tip for a new player, tip once they have some experience). Only suggests what this run didn't already do."""
+    """(tip for a new player, tip once they have some experience). Never suggests a setting this run already used."""
     tries = []
     if "Committer" not in arena.selected_bot_names:
         tries.append("Try the Committer — watch what happens to your choices when the opponent "

@@ -604,7 +604,7 @@ def _make_reveal_body(arena: MSArenaState) -> str:
 
 
 def debrief_tips(arena: MSArenaState) -> tuple[str, str]:
-    """(tip for a new player, tip once they have some experience). Only suggests what this run didn't already do."""
+    """(tip for a new player, tip once they have some experience). Never suggests a setting this run already used."""
     if arena.rotating:
         new = "Try one opponent at a time and deliberately vary your moves."
     elif isinstance(arena.opponent, PerfectRandomizer):

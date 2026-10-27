@@ -451,7 +451,7 @@ def your_play_text(arena: ArenaState) -> str:
 
 
 def debrief_tips(arena: ArenaState) -> tuple[str, str]:
-    """(tip for a new player, tip once they have some experience). Only suggests what this run didn't already do."""
+    """(tip for a new player, tip once they have some experience). Never suggests a setting this run already used."""
     noise = "turning on noise" if arena.noise == 0 else "changing the noise level"
     return (
         f"Try changing the roster or {noise} - different combinations produce very different outcomes. "
