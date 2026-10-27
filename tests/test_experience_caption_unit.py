@@ -19,6 +19,7 @@ from __future__ import annotations
 import re
 
 import pytest
+from tests.schelling_pick import fill_pick
 from streamlit.testing.v1 import AppTest
 
 from gtlab.ui.game_loop import CONCEPT_KEY as PD_KEY
@@ -114,6 +115,7 @@ def test_schelling_caption_counts_puzzles():
     while "sch_play_again" not in [b.key for b in at.button]:
         assert puzzles < 20, "the session should end"
         submit = next(b.key for b in at.button if b.key and b.key.startswith("sch_submit_"))
+        fill_pick(at)
         at.button(key=submit).click()
         at.run()
         puzzles += 1

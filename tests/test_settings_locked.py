@@ -10,6 +10,7 @@ them, and back on once the run is over.
 from __future__ import annotations
 
 import pytest
+from tests.schelling_pick import fill_pick
 from streamlit.testing.v1 import AppTest
 
 APP_PATH = "app.py"
@@ -74,6 +75,7 @@ def _finish(at, concept):
         at.run()
         while "sch_play_again" not in [b.key for b in at.button]:
             submit = next(b.key for b in at.button if b.key and b.key.startswith("sch_submit_"))
+            fill_pick(at)
             at.button(key=submit).click()
             at.run()
             if "sch_next_puzzle" in [b.key for b in at.button]:

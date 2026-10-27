@@ -1,0 +1,73 @@
+"""
+A Schelling number pick is only locked in once a valid number has been entered.
+
+Bug this guards: the number boxes started at a default (1, or half the total for a split). Typing a number outside the
+allowed range is never sent to the app (the box shows it with a range warning), so the app still held the default and
+"Lock in my pick" submitted it: a player who typed -5 or 999 was told "You picked 1". The boxes now start empty, and
+"Lock in my pick" stays off until a valid number is in.
+"""
+
+from __future__ import annotations
+
+from streamlit.testing.v1 import AppTest
+
+
+def _session_until(kind: str) -> AppTest:
+    """Start a session on a category that has the kind of puzzle we want, and advance to the first one."""
+    at = AppTest.from_file("app.py", default_timeout=30)
+    at.run()
+    at.button(key="menu_play_schelling").click()
+    at.run()
+    keep = "numbers" if kind == "int" else "splitting"
+    for cat in ("numbers", "places_times", "words_categories", "splitting"):
+        if cat != keep:
+            at.checkbox(key=f"sch_cat_{cat}").uncheck()
+    at.run()
+    at.button(key="sch_start_session").click()
+    at.run()
+    prefix = "sch_input_int_" if kind == "int" else "sch_split_mine_"
+    for _ in range(12):
+        if any(n.key and n.key.startswith(prefix) for n in at.number_input):
+            return at
+        # not this kind of puzzle: answer it and move on
+        submit = next(b.key for b in at.button if b.key and b.key.startswith("sch_submit_"))
+        if at.radio:
+            at.radio[0].set_value(at.radio[0].options[0])
+        at.button(key=submit).click()
+        at.run()
+        at.button(key="sch_next_puzzle").click()
+        at.run()
+    raise AssertionError(f"no {kind} puzzle found")
+
+
+def _submit(at):
+    return at.button(key=next(b.key for b in at.button if b.key and b.key.startswith("sch_submit_")))
+
+
+def test_an_integer_pick_starts_empty_and_locks_in_only_when_entered():
+    at = _session_until("int")
+    box = next(n for n in at.number_input if n.key.startswith("sch_input_int_"))
+    assert box.value is None, "no default number to lock in by accident"
+    assert _submit(at).proto.disabled
+
+    box.set_value(box.proto.min + 2).run()
+    assert not _submit(at).proto.disabled
+    _submit(at).click()
+    at.run()
+    assert f"You picked {int(box.proto.min) + 2}" in " ".join(m.value for m in at.markdown)
+
+
+def test_a_split_starts_empty_too():
+    at = _session_until("split")
+    box = next(n for n in at.number_input if n.key.startswith("sch_split_mine_"))
+    assert box.value is None
+    assert _submit(at).proto.disabled
+
+
+def test_a_click_on_lock_in_with_no_pick_locks_nothing_in():
+    at = _session_until("int")
+    played = at.session_state["sch_session"].rounds_played
+    _submit(at).click()  # the browser keeps the button off, but a click can still arrive
+    at.run()
+    assert not at.exception
+    assert at.session_state["sch_session"].rounds_played == played

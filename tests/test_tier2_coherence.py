@@ -17,6 +17,7 @@ import subprocess
 import pytest
 
 from gtlab.concepts.registry import CONCEPTS
+from tests.schelling_pick import fill_pick
 from streamlit.testing.v1 import AppTest
 
 APP_PATH = "app.py"
@@ -202,6 +203,7 @@ class TestConceptRegressionTier2:
         btn_keys = [b.key for b in at.button]
         submit_key = next((k for k in btn_keys if k.startswith("sch_submit_")), None)
         assert submit_key is not None, f"No submit button. Keys: {btn_keys}"
+        fill_pick(at)
         at.button(key=submit_key).click()
         at.run()
         assert not at.exception, f"Schelling raised: {at.exception}"

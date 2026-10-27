@@ -150,7 +150,11 @@ def _render_sch_sidebar(locked: bool = False) -> tuple[bool, list[str]]:
 
 
 def _render_integer_range_input(puzzle, submitted: bool) -> object | None:
-    """Render an integer entry for IntegerRange choice spaces."""
+    """Render an integer entry for IntegerRange choice spaces.
+
+    The box starts empty and the pick is None until a valid number is entered: a number outside the range is never
+    sent to the app, so a default would be locked in instead of what the player typed.
+    """
     cs: IntegerRange = puzzle.choice_space
     is_open = cs.hi >= 10_000  # sentinel for the 'effectively unbounded' puzzle
 
@@ -159,7 +163,7 @@ def _render_integer_range_input(puzzle, submitted: bool) -> object | None:
             "Your pick (any positive whole number):",
             min_value=1,
             max_value=None,
-            value=1,
+            value=None,
             step=1,
             key=f"sch_input_int_{puzzle.id}",
             disabled=submitted,
@@ -169,12 +173,12 @@ def _render_integer_range_input(puzzle, submitted: bool) -> object | None:
             f"Your pick ({cs.lo}-{cs.hi}):",
             min_value=cs.lo,
             max_value=cs.hi,
-            value=cs.lo,
+            value=None,
             step=1,
             key=f"sch_input_int_{puzzle.id}",
             disabled=submitted,
         )
-    return int(val)
+    return None if val is None else int(val)
 
 
 def _render_option_set_input(puzzle, submitted: bool) -> object | None:
@@ -204,16 +208,16 @@ def _render_split_input(puzzle, submitted: bool) -> object | None:
             "My share",
             min_value=0,
             max_value=cs.total,
-            value=cs.total // 2,
+            value=None,  # empty until a valid share is entered (see _render_integer_range_input)
             step=1,
             key=f"sch_split_mine_{puzzle.id}",
             disabled=submitted,
         )
     with col2:
-        their_share = cs.total - int(my_share)
-        st.metric("Stranger's share", their_share)
+        their_share = None if my_share is None else cs.total - int(my_share)
+        st.metric("Stranger's share", "—" if their_share is None else their_share)
 
-    return (int(my_share), their_share)
+    return None if my_share is None else (int(my_share), their_share)
 
 
 def _render_player_input(puzzle, submitted: bool) -> object | None:
@@ -465,7 +469,7 @@ def _render_puzzle_panel(session: SCHSession, progress: dict) -> None:
                 width="stretch",
                 key=f"sch_submit_{puzzle.id}",
                 disabled=not can_submit,
-            ):
+            ) and can_submit:  # a click can still arrive on the disabled button; never lock in an empty pick
                 result = submit_pick(session, player_pick)
                 st.session_state[_KEY_LAST_NUDGE] = result.get("nudge_event")
 

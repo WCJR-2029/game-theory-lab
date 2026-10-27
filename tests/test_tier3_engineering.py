@@ -22,6 +22,7 @@ from __future__ import annotations
 import random
 
 import pytest
+from tests.schelling_pick import fill_pick
 from streamlit.testing.v1 import AppTest
 
 from gtlab.engine import COOPERATE, DEFECT, PD_GAME, STAG_HUNT_GAME, CHICKEN_GAME
@@ -620,6 +621,7 @@ def test_each_registry_concept_enters_and_plays(concept_key, button_sequence):
         submit_key = next((k for k in btn_keys if k.startswith("sch_submit_")), None)
         assert submit_key, f"schelling: no submit button after starting. Available: {btn_keys}"
         if submit_key:
+            fill_pick(at)
             at.button(key=submit_key).click()
             at.run()
             assert not at.exception, (
