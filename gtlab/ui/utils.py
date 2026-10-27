@@ -125,6 +125,17 @@ def play_out_help(
 # ---------------------------------------------------------------------------
 
 
+def standing_headline(rank: int, total: int, score: int) -> str:
+    """The debrief banner's headline: the run is over, where you finished, and who the table counts.
+
+    "Finished 2nd of 7" left players unsure who the 7th was (the table counts you), and one read the
+    debrief as never saying they were done.
+    """
+    place = "top of the table" if rank == 1 else f"{ordinal(rank)} of {total}"
+    others = total - 1
+    return f"Run complete: {place} (you and {others} opponent{'s' if others != 1 else ''}) — {score} pts"
+
+
 def standings_halves(rows: list[dict]) -> tuple[set[str], set[str]]:
     """Return (top_half, bottom_half) bot names from the final standings rows.
 

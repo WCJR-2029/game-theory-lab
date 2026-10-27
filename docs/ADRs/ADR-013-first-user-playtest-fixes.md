@@ -101,6 +101,20 @@ were fixed under tests. The ones below changed how a game plays or looks, so the
   exactly +/-10,000 stands for "no limit"; a test holds every such puzzle's prompt to saying so. After lock-in the
   reveal shows the saved pick, not the box's own state.
 
+### 9. The debrief names the idea, and says the run is over
+- **Problem.** Each game names its idea in a note that fires on a particular round (Stag Hunt's after a shared Stag).
+  A new player who never had that round, such as one who only met the Bluffer, finished without the idea ever being
+  said: "It never explains why Stag is better when both go for it, or why Hare is the safe choice" (two rounds
+  running, and the same for the Prisoner's Dilemma). Separately, "Finished 2nd of 7" left players unsure who the 7th
+  was, and one read the debrief as never saying they were done.
+- **Decision.** Each arena debrief shows "The idea": one plain line built from the game's own payoffs (Chicken's from
+  the stakes dial), after "What just happened in there". It is shown until the player is experienced, the same fade
+  as the notes (ADR-005): felt first, named after, and not repeated forever. Tests hold every claim in it to the
+  payoffs. The banner headline reads "Run complete: 2nd of 7 (you and 6 opponents) — 154 pts".
+- **Alternatives.** Showing the idea before play: rejected, it would name the lesson before it is felt (ADR-005:
+  structure is named only after the feel). Showing it to new players only: rejected, a first full run already moves
+  a player past "new" (6 matches), so it would never show.
+
 ## Declined
 Recorded so they are not re-raised without new evidence.
 - **Resuming a run after a browser refresh.** It would mean persisting the whole arena (RNG and opponent state).
@@ -111,7 +125,8 @@ Recorded so they are not re-raised without new evidence.
 - **Thousands separators on Ultimatum's offer slider.** Streamlit's slider format can't add them; the figures under
   the slider show them.
 - **One round per double-click.** A double-click on a move button plays two rounds. Two clicks are two decisions;
-  swallowing the second would also swallow a fast, deliberate one. Raised once.
+  swallowing the second would also swallow a fast, deliberate one. Raised in two rounds, both by the tester whose
+  brief is to double-click everything.
 - **"What just happened?" below the fold.** It sits under the next decision on purpose (section 2); it is optional
   reading and the note above it carries the point.
 - **A shorter run, again.** The latest round still had four of five players call the default run long, now with the

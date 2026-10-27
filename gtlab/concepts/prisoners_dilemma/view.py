@@ -44,9 +44,11 @@ from gtlab.ui.theme import (
     transfer_expander,
 )
 from gtlab.ui.settings import remembered, reset_setting
+from gtlab.engine.match import PD_GAME
 from gtlab.ui.utils import ordinal
 from gtlab.ui.utils import (
-    match_over_line, of_own_rounds, own_rounds, running_total, standings_halves, top_bot_lead,
+    match_over_line, of_own_rounds, own_rounds, running_total, standing_headline, standings_halves,
+    top_bot_lead,
 )
 from gtlab.ui.utils import play_out_help, your_play_line
 from gtlab.concepts.prisoners_dilemma.briefing import (
@@ -462,6 +464,16 @@ def debrief_tips(arena: ArenaState) -> tuple[str, str]:
     )
 
 
+def the_idea(game) -> str:
+    """The debrief's plain-words idea, from the game's own payoffs (ADR-013 §9: felt first, named after)."""
+    return (
+        f"Both cooperating pays {game.payoff_00} each and both defecting {game.payoff_11} each, yet whatever the "
+        f"other does, defecting pays you more in a single round ({game.payoff_10} instead of {game.payoff_00}, or "
+        f"{game.payoff_11} instead of {game.payoff_01}). That pull, away from the outcome you'd both prefer, is the "
+        "dilemma; over many rounds, what you do comes back to you."
+    )
+
+
 def _render_debrief(arena: ArenaState, progress: dict) -> None:
     rows = compute_standings(arena)
     your_rank = next((i + 1 for i, r in enumerate(rows) if r["is_human"]), len(rows))
@@ -470,19 +482,20 @@ def _render_debrief(arena: ArenaState, progress: dict) -> None:
 
     if your_rank == 1:
         kind = "win"
-        headline = f"Top of the table — {your_score} pts"
     elif your_rank <= max(1, total // 2):
         kind = "neutral"
-        headline = f"Finished {ordinal(your_rank)} of {total} — {your_score} pts"
     else:
         kind = "draw"
-        headline = f"Finished {ordinal(your_rank)} of {total} — {your_score} pts"
 
-    result_banner(kind, headline, your_play_text(arena))
+    result_banner(kind, standing_headline(your_rank, total, your_score), your_play_text(arena))
 
     reveal_body = _make_reveal_body(rows)
     if reveal_body:
         arena_reveal("What just happened in there", reveal_body)
+
+    # The idea in plain words, after it was felt; it fades with experience, like the notes (ADR-005).
+    if get_nudge_state(progress, CONCEPT_KEY) != NudgeState.EXPERIENCED:
+        arena_reveal("The idea", the_idea(PD_GAME))
 
     nudge_state = get_nudge_state(progress, CONCEPT_KEY)
     exp = progress.get("concepts", {}).get(CONCEPT_KEY, 0)

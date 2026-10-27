@@ -66,9 +66,11 @@ from gtlab.ui.theme import (
     transfer_expander,
 )
 from gtlab.ui.settings import remembered, reset_setting
+from gtlab.engine.match import STAG_HUNT_GAME
 from gtlab.ui.utils import ordinal
 from gtlab.ui.utils import (
-    match_over_line, of_own_rounds, own_rounds, running_total, standings_halves, top_bot_lead,
+    match_over_line, of_own_rounds, own_rounds, running_total, standing_headline, standings_halves,
+    top_bot_lead,
 )
 from gtlab.ui.utils import play_out_help, your_play_line
 from gtlab.concepts.stag_hunt.briefing import (
@@ -617,6 +619,15 @@ def debrief_tips(arena: SHArenaState) -> tuple[str, str]:
     return " ".join(tries) + " The same payoffs; very different dynamics.", more
 
 
+def the_idea(game) -> str:
+    """The debrief's plain-words idea, from the game's own payoffs (ADR-013 §9: felt first, named after)."""
+    return (
+        f"Both hunting Stag pays the most: {game.payoff_00} each. Hare pays {game.payoff_11} whatever the other "
+        f"does, and a Stag hunted alone pays {game.payoff_01}. Nothing tempts you away from a shared Stag; the only "
+        "question is whether you trust the other hunter to show up, and announcements are only words."
+    )
+
+
 def _render_sh_debrief(arena: SHArenaState, progress: dict) -> None:
     rows = compute_sh_standings(arena)
     your_rank = next((i + 1 for i, r in enumerate(rows) if r["is_human"]), len(rows))
@@ -625,19 +636,20 @@ def _render_sh_debrief(arena: SHArenaState, progress: dict) -> None:
 
     if your_rank == 1:
         kind = "win"
-        headline = f"Top of the table — {your_score} pts"
     elif your_rank <= max(1, total // 2):
         kind = "neutral"
-        headline = f"Finished {ordinal(your_rank)} of {total} — {your_score} pts"
     else:
         kind = "draw"
-        headline = f"Finished {ordinal(your_rank)} of {total} — {your_score} pts"
 
-    result_banner(kind, headline, your_play_text(arena))
+    result_banner(kind, standing_headline(your_rank, total, your_score), your_play_text(arena))
 
     reveal_body = _make_sh_reveal_body(rows)
     if reveal_body:
         arena_reveal("What just happened in there", reveal_body)
+
+    # The idea in plain words, after it was felt; it fades with experience, like the notes (ADR-005).
+    if get_nudge_state(progress, SH_CONCEPT_KEY) != NudgeState.EXPERIENCED:
+        arena_reveal("The idea", the_idea(STAG_HUNT_GAME))
 
     nudge_state = get_nudge_state(progress, SH_CONCEPT_KEY)
     exp = progress.get("concepts", {}).get(SH_CONCEPT_KEY, 0)

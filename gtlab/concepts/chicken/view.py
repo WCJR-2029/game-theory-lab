@@ -75,7 +75,8 @@ from gtlab.ui.theme import (
 from gtlab.ui.settings import remembered, reset_setting
 from gtlab.ui.utils import ordinal
 from gtlab.ui.utils import (
-    match_over_line, of_own_rounds, own_rounds, running_total, standings_halves, top_bot_lead,
+    match_over_line, of_own_rounds, own_rounds, running_total, standing_headline, standings_halves,
+    top_bot_lead,
 )
 from gtlab.ui.utils import play_out_help, your_play_line
 
@@ -634,6 +635,16 @@ def debrief_tips(arena: CHKArenaState) -> tuple[str, str]:
     return " ".join(tries), more
 
 
+def the_idea(game) -> str:
+    """The debrief's plain-words idea, from the game's own payoffs (ADR-013 §9: felt first, named after)."""
+    return (
+        f"Going Straight while they swerve wins {game.payoff_10}; swerving while they go Straight costs "
+        f"{-game.payoff_01}; both swerving is {game.payoff_00}; both going Straight is the crash, {game.payoff_11} "
+        "each. Each of you wants the other to be the one who swerves, and if neither does, you both crash. That is "
+        "why throwing away the wheel can work: it only pays when they see it and believe it."
+    )
+
+
 def _render_chk_debrief(arena: CHKArenaState, progress: dict) -> None:
     rows = compute_chk_standings(arena)
     your_rank = next((i + 1 for i, r in enumerate(rows) if r["is_human"]), len(rows))
@@ -642,19 +653,20 @@ def _render_chk_debrief(arena: CHKArenaState, progress: dict) -> None:
 
     if your_rank == 1:
         kind = "win"
-        headline = f"Top of the table — {your_score} pts"
     elif your_rank <= max(1, total // 2):
         kind = "neutral"
-        headline = f"Finished {ordinal(your_rank)} of {total} — {your_score} pts"
     else:
         kind = "draw"
-        headline = f"Finished {ordinal(your_rank)} of {total} — {your_score} pts"
 
-    result_banner(kind, headline, your_play_text(arena))
+    result_banner(kind, standing_headline(your_rank, total, your_score), your_play_text(arena))
 
     reveal_body = _make_chk_reveal_body(rows, arena)
     if reveal_body:
         arena_reveal("What just happened in there", reveal_body)
+
+    # The idea in plain words, after it was felt; it fades with experience, like the notes (ADR-005).
+    if get_nudge_state(progress, CHK_CONCEPT_KEY) != NudgeState.EXPERIENCED:
+        arena_reveal("The idea", the_idea(arena.game))
 
     transfer_expander([
         "Two drivers speeding toward a one-lane bridge, each daring the other to brake first.",
