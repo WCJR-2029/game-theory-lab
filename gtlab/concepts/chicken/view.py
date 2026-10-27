@@ -564,7 +564,7 @@ def _make_chk_reveal_body(rows: list[dict], arena: CHKArenaState) -> str:
             )
         elif top_bot["name"] == dove_name:
             sentences.append(
-                f"{top_bot_lead(rows, 'Dove')} — consistent yielding never steered it into a crash "
+                f"{top_bot_lead(rows, 'Dove')} — it never chose a collision, "
                 "while the more aggressive strategies collided."
             )
         else:

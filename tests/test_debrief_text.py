@@ -208,7 +208,6 @@ class TestChickenDoveSentences:
             _rows([HUMAN_LABEL] + [n for n in names if n != "Dove"] + ["Dove"])
         text = _make_chk_reveal_body(rows, None)
         assert "Dove" in text, text
-        for outcome_claim in ("avoided all the crashes", "never crashing"):
+        for outcome_claim in ("avoided all the crashes", "never crashing", "never steered it into a crash"):
             assert outcome_claim not in text, text
-        choice_claim = "never steered it into a crash" if order == ["Dove"] else "never chose a collision"
-        assert choice_claim in text, text
+        assert "never chose a collision" in text, text
