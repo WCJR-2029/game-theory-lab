@@ -133,9 +133,9 @@ def _render_sch_sidebar() -> tuple[bool, list[str]]:
         if checked:
             selected_categories.append(cat)
 
+    # Nothing picked: no silent "all categories"; the Start button is off until one is picked.
     if not selected_categories:
         st.sidebar.warning("Select at least one category.")
-        selected_categories = list(ALL_CATEGORIES)
 
     return hard_mode, selected_categories
 
@@ -588,6 +588,8 @@ def render() -> None:
             start_button_key="sch_start_session",
             briefing_expander_label="Read the full briefing",
             briefing_content_fn=_briefing_content,
+            start_disabled=not selected_categories,
+            disabled_reason="Pick at least one category in the sidebar to start.",
         )
 
         if started:

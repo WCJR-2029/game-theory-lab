@@ -207,21 +207,31 @@ def _render_sidebar() -> tuple[list[str], float, bool]:
         "You'll play each one in turn."
     )
     all_names = list(STRATEGY_CLASSES.keys())
+    col_all, col_clear = st.sidebar.columns(2)
+    with col_all:
+        select_all = st.button("Select all", key="pd_roster_all", width="stretch")
+    with col_clear:
+        clear = st.button("Clear", key="pd_roster_clear", width="stretch")
+    # The ticks live in session state (default: the standard roster), so the two buttons can set them.
+    for name in all_names:
+        key = f"pd_roster_{name}"
+        if select_all or clear:
+            st.session_state[key] = select_all
+        elif key not in st.session_state:
+            st.session_state[key] = name in DEFAULT_SELECTED
     selected_names = []
     for name in all_names:
-        default_on = name in DEFAULT_SELECTED
         checked = st.sidebar.checkbox(
             name,
-            value=default_on,
             key=f"pd_roster_{name}",
             help=STRATEGY_DESCRIPTIONS.get(name, ""),
         )
         if checked:
             selected_names.append(name)
 
+    # Nothing picked: no hidden default opponent; the Start button is off until one is picked.
     if not selected_names:
         st.sidebar.warning("Select at least one strategy.")
-        selected_names = [all_names[0]]
 
     st.sidebar.subheader("Noise")
     st.sidebar.caption(
@@ -562,6 +572,8 @@ def render() -> None:
             start_button_key="pd_start_run",
             briefing_expander_label="Read the full briefing",
             briefing_content_fn=_briefing_content,
+            start_disabled=not selected_names,
+            disabled_reason="Pick at least one opponent in the sidebar to start.",
         )
 
         if started:

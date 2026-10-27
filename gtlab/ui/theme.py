@@ -780,8 +780,13 @@ def intro_above_fold(
     start_button_key: str = "start_btn",
     briefing_expander_label: str = "Read the full briefing",
     briefing_content_fn: object = None,
+    start_disabled: bool = False,
+    disabled_reason: str = "",
 ) -> bool:
     """Render the intro screen with Start above the fold.
+
+    start_disabled turns the Start button off (e.g. nothing picked in the sidebar),
+    with disabled_reason shown under it.
 
     Layout (top to bottom):
       1. One-line hook (bold, muted accent).
@@ -837,7 +842,10 @@ def intro_above_fold(
             key=start_button_key,
             type="primary",
             width="stretch",
+            disabled=start_disabled,
         )
+        if start_disabled and disabled_reason:
+            st.caption(disabled_reason)
 
     # Briefing expander (collapsed)
     if briefing_content_fn is not None:

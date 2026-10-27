@@ -172,6 +172,8 @@ def init_chk_arena(
     crash: int = CHICKEN_DEFAULT_CRASH,
 ) -> CHKArenaState:
     """Build a fresh CHKArenaState for the start of a new run."""
+    if not selected_bot_names:
+        raise ValueError("Pick at least one opponent: the roster is empty.")
     game = make_chicken_game(crash=crash)
     state = CHKArenaState(
         selected_bot_names=selected_bot_names,

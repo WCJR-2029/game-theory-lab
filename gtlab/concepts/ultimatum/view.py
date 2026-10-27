@@ -159,7 +159,7 @@ def _render_ult_sidebar() -> tuple[list[str], list[str], int, bool, bool]:
         if checked:
             selected_proposers.append(p.name)
     if not selected_proposers:
-        selected_proposers = [all_proposer_names[0]]
+        st.sidebar.warning("Select at least one way they propose.")
 
     all_responder_names = [p.name for p in RESPONDER_PROFILES]
     selected_responders: list[str] = []
@@ -174,7 +174,7 @@ def _render_ult_sidebar() -> tuple[list[str], list[str], int, bool, bool]:
         if checked:
             selected_responders.append(p.name)
     if not selected_responders:
-        selected_responders = [all_responder_names[0]]
+        st.sidebar.warning("Select at least one way they respond.")
 
     # --- Stake size ---
     st.sidebar.subheader("Stake Size")
@@ -781,6 +781,8 @@ def render() -> None:
             start_button_key="ult_start_session",
             briefing_expander_label="Read the full briefing",
             briefing_content_fn=_briefing_content,
+            start_disabled=not proposer_names or not responder_names,
+            disabled_reason="Pick at least one opponent style in each sidebar list to start.",
         )
 
         if started:
