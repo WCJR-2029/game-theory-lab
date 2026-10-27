@@ -184,9 +184,10 @@ def _render_debrief_standings(arena: CHKArenaState) -> None:
 
     chart_rows = _build_chk_chart_rows(arena)
 
-    human_unplayed = any(r.get("unplayed") for r in rows)
-    if human_unplayed:
-        st.caption("Bots played each other in the background while you played.")
+    # The debrief's paragraph talks about these matches, so say they happened (none with a single opponent).
+    if len(arena.bots) > 1:
+        st.caption("Every opponent also played every other opponent in the background; the standings count those "
+                   "matches too.")
 
     leaderboard_chart(chart_rows, highlight_name=CHK_HUMAN_LABEL)
 
