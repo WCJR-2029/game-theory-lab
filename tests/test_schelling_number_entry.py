@@ -61,7 +61,9 @@ def test_an_integer_pick_starts_empty_and_locks_in_only_when_entered():
     assert not _submit(at).proto.disabled
     _submit(at).click()
     at.run()
-    assert f"You picked {pick}" in " ".join(m.value for m in at.markdown)
+    assert at.session_state["sch_session"].player_pick == pick
+    # "You picked 3; ..." or, when the stranger matched, "The stranger also picked 3."
+    assert f"picked {pick}" in " ".join(m.value for m in at.markdown)
 
 
 def test_a_split_starts_empty_too():
