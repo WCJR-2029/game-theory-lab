@@ -552,21 +552,7 @@ def _render_puzzle_panel(session: SCHSession, progress: dict) -> None:
         # Focal distribution reveal
         _render_focal_distribution(puzzle)
 
-        # Focal-vs-logic explanation
-        if is_focal_vs_logic(puzzle) and puzzle.decoy_explanation:
-            with st.expander("Why does the obvious answer win?"):
-                decoy_label = _format_answer(puzzle.logical_decoy)
-                st.write(
-                    f"**The clever answer was {decoy_label}.** "
-                    f"{puzzle.decoy_explanation}"
-                )
-
-        st.write("")
-        _render_sch_nudge(session.last_nudge_event, progress)
-        _render_sch_on_demand_nudge(session.last_nudge_event, progress)
-
-        # Next puzzle control
-        st.divider()
+        # The next step before the teaching note, as in the arena games, so it isn't below the fold.
         remaining = len(session.puzzle_queue) - session.current_index - 1
         next_label = "Next puzzle" if remaining > 0 else "See results"
         col_next, _ = st.columns([1, 3])
@@ -580,6 +566,19 @@ def _render_puzzle_panel(session: SCHSession, progress: dict) -> None:
                 advance_to_next(session)
                 st.session_state[_KEY_LAST_NUDGE] = None
                 st.rerun()
+
+        # Focal-vs-logic explanation
+        if is_focal_vs_logic(puzzle) and puzzle.decoy_explanation:
+            with st.expander("Why does the obvious answer win?"):
+                decoy_label = _format_answer(puzzle.logical_decoy)
+                st.write(
+                    f"**The clever answer was {decoy_label}.** "
+                    f"{puzzle.decoy_explanation}"
+                )
+
+        st.write("")
+        _render_sch_nudge(session.last_nudge_event, progress)
+        _render_sch_on_demand_nudge(session.last_nudge_event, progress)
 
 
 # ---------------------------------------------------------------------------

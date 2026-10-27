@@ -33,7 +33,9 @@ were fixed under tests. The ones below changed how a game plays or looks, so the
   about what it does until hovered.
 - **Decision.** Order in the Prisoner's Dilemma, Stag Hunt and Chicken: the last result (one banner), the decision
   with "Play out this match" and a one-line "Finishes this match for you." beside it, then the teaching note. The
-  Stag Hunt and Chicken first-round setup notes, set for new players but never shown, now show too.
+  Stag Hunt and Chicken first-round setup notes, set for new players but never shown, now show too. Schelling
+  followed later (its "Next puzzle" sat half off-screen under the note): result, the crowd's answers, "Next puzzle",
+  then the note.
 - **Alternatives.** Decision above the last result: rejected, the result is what the next decision reacts to. Hiding
   the note in an expander for new players: rejected, ADR-005 shows it inline until the player has some experience.
 
@@ -108,3 +110,12 @@ Recorded so they are not re-raised without new evidence.
   there); with the run length stated up front, Play-out, and Select all / Clear, the player sets the length.
 - **Thousands separators on Ultimatum's offer slider.** Streamlit's slider format can't add them; the figures under
   the slider show them.
+- **One round per double-click.** A double-click on a move button plays two rounds. Two clicks are two decisions;
+  swallowing the second would also swallow a fast, deliberate one. Raised once.
+- **"What just happened?" below the fold.** It sits under the next decision on purpose (section 2); it is optional
+  reading and the note above it carries the point.
+- **A shorter run, again.** The latest round still had four of five players call the default run long, now with the
+  length stated up front and Play-out named on the button. Kept, for the reason above; the most persistent remaining
+  complaint, so the first thing to revisit if the standings stop being the point.
+- **The move buttons shift down after the first round.** The last-result banner appears from round 2 on; a blank
+  placeholder in round 1 would be empty space on the first screen a player sees.
