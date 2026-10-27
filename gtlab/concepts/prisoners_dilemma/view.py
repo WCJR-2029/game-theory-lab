@@ -352,10 +352,11 @@ def _render_current_match_panel(arena: ArenaState, progress: dict) -> None:
     rounds_left = MATCH_LENGTH - rounds_done
     if rounds_left > 1:
         st.markdown("<div style='height:0.4rem'></div>", unsafe_allow_html=True)
-        col_ff, col_note = st.columns([1, 3])
+        move = "Cooperate" if fast_forward_move(arena) == COOPERATE else "Defect"
+        col_ff, col_note = st.columns([2, 3])
         with col_ff:
             if st.button(
-                "Play out this match",
+                f"Play out with {move}",
                 key="pd_btn_fast_forward",
                 help=play_out_help(
                     rounds_left,
@@ -368,7 +369,6 @@ def _render_current_match_panel(arena: ArenaState, progress: dict) -> None:
                 progress = st.session_state.progress = record_play(CONCEPT_KEY)
                 st.rerun()
         with col_note:
-            move = "Cooperate" if fast_forward_move(arena) == COOPERATE else "Defect"
             st.caption(f"Finishes this match for you, playing {move} each round.")
 
     # The teaching note comes after the decision, so the next move stays near the top of the screen.
@@ -587,7 +587,7 @@ def render() -> None:
             disabled_reason="Pick at least one opponent in the sidebar to start.",
             start_note=(
                 f"This run: {len(selected_names)} opponent{'s' if len(selected_names) != 1 else ''} × "
-                f"{MATCH_LENGTH} rounds. \"Play out this match\" can finish any match for you."
+                f"{MATCH_LENGTH} rounds. The \"Play out\" button can finish any match for you."
             ),
         )
 

@@ -82,7 +82,9 @@ were fixed under tests. The ones below changed how a game plays or looks, so the
 - **Problem.** In a later round four of five players still couldn't tell what "Play out this match" would play (the
   move was only in the tooltip), three didn't know before Start that a run is 6 opponents x 10 rounds, and a returning
   player found no "where to pick up".
-- **Decision.** The line beside Play-out names the move ("playing Cooperate each round"). The setup screen says how
+- **Decision.** The line beside Play-out names the move ("playing Cooperate each round"); when the next round still
+  called that line small and easy to miss (four of five players), the button's own label took the move too ("Play out
+  with Defect"). The setup screen says how
   long the run is and that Play-out can finish any match. Once something has been played, the menu marks the first
   game not yet played "Next up". Stag Hunt's and Chicken's second step no longer repeat the first step's prompt, so
   their buttons sit higher.

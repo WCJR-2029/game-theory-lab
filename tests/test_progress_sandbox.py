@@ -30,7 +30,7 @@ def test_the_app_run_by_apptest_uses_the_sandbox(tmp_path):
     start = next(b for b in at.button if b.label == "Start run")
     start.click()
     at.run()
-    ff = next(b for b in at.button if b.label == "Play out this match")
+    ff = next(b for b in at.button if b.label.startswith("Play out"))
     ff.click()
     at.run()
     assert not at.exception

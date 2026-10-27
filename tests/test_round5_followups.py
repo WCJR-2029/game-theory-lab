@@ -2,7 +2,8 @@
 Follow-ups from the fifth round of first-time-user testing.
 
 - Four of five players still couldn't tell what "Play out this match" would play: the move was only in the tooltip.
-  The line beside the button now names it.
+  The line beside the button now names it. In the next round four of five still called that line "small" and easy to
+  miss, so the button's own label names the move too ("Play out with Defect").
 - Three said nothing before Start told them a run is 6 opponents x 10 rounds. The setup screen now says how long the
   run is, and that Play-out can finish any match.
 - In Stag Hunt, after announcing on a new match's first round, the Hunt buttons sat half off the bottom of the screen;
@@ -32,16 +33,18 @@ def _captions(at) -> str:
     return " ".join(c.value for c in at.caption)
 
 
-@pytest.mark.parametrize("concept, prefix, expected", [
-    ("iterated_pd", "pd", "Finishes this match for you, playing Cooperate each round."),
-    ("stag_hunt", "sh", "Finishes this match for you, playing Stag each round."),
-    ("chicken", "chk", "Finishes this match for you, keeping the wheel and playing Swerve each round."),
+@pytest.mark.parametrize("concept, prefix, expected, label", [
+    ("iterated_pd", "pd", "Finishes this match for you, playing Cooperate each round.", "Play out with Cooperate"),
+    ("stag_hunt", "sh", "Finishes this match for you, playing Stag each round.", "Play out with Stag"),
+    ("chicken", "chk", "Finishes this match for you, keeping the wheel and playing Swerve each round.",
+     "Play out with Swerve"),
 ])
-def test_the_line_beside_play_out_names_the_move(concept, prefix, expected):
+def test_the_line_beside_play_out_names_the_move(concept, prefix, expected, label):
     at = _open(concept)
     at.button(key=f"{prefix}_start_run").click()
     at.run()
     assert expected in _captions(at), _captions(at)
+    assert at.button(key=f"{prefix}_btn_fast_forward").label == label
 
 
 def _pd_defect(at):
@@ -76,6 +79,7 @@ def test_the_named_move_is_the_move_play_out_plays(concept, prefix, arena_key, p
     at.run()
     play(at)
     assert f"playing {label} each round." in _captions(at), _captions(at)
+    assert at.button(key=f"{prefix}_btn_fast_forward").label == f"Play out with {label}"
 
     before = len(at.session_state[arena_key].round_log)
     at.button(key=f"{prefix}_btn_fast_forward").click()
@@ -95,7 +99,7 @@ def test_the_setup_screen_says_how_long_the_run_is(concept, prefix, opponents):
     at = _open(concept)
     text = _captions(at)
     assert f"This run: {opponents} opponents × 10 rounds" in text, text
-    assert "Play out this match" in text, text
+    assert "The \"Play out\" button can finish any match" in text, text
 
     names = [c.key for c in at.checkbox if c.key and c.key.startswith(f"{prefix}_roster_")]
     for key in names[1:]:

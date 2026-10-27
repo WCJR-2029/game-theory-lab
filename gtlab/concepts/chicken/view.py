@@ -498,10 +498,10 @@ def _render_current_match_panel(arena: CHKArenaState, progress: dict) -> None:
     # The button is outside the commit/choose branching so it persists.
     if not arena.commit_decided and rounds_left > 1:
         st.markdown("<div style='height:0.4rem'></div>", unsafe_allow_html=True)
-        col_ff, col_note = st.columns([1, 3])
+        col_ff, col_note = st.columns([2, 3])
         with col_ff:
             if st.button(
-                "Play out this match",
+                f"Play out with {_move_label(fast_forward_chk_move(arena))}",
                 key="chk_btn_fast_forward",
                 help=play_out_help(
                     rounds_left,
@@ -752,7 +752,7 @@ def render() -> None:
             disabled_reason="Pick at least one opponent in the sidebar to start.",
             start_note=(
                 f"This run: {len(selected_names)} opponent{'s' if len(selected_names) != 1 else ''} × "
-                f"{CHK_MATCH_LENGTH} rounds. \"Play out this match\" can finish any match for you."
+                f"{CHK_MATCH_LENGTH} rounds. The \"Play out\" button can finish any match for you."
             ),
         )
 
